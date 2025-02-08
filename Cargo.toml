@@ -1,0 +1,14 @@
+[package]
+name = "pair"
+version = "0.1.0"
+authors = ["Isaac Chen"]
+description = "Safe API for generic self-referential pairs of owner and dependent."
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/ijchen/pair"
+documentation = "https://docs.rs/pair"
+edition = "2021"
+include = ["/src/", "/Cargo.toml", "/README.md", "/LICENSE-*"]
+publish = false
+
+[dependencies]
