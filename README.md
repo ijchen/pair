@@ -1,5 +1,7 @@
 Safe API for generic self-referential pairs of owner and dependent.
 
+TODO: description and "basic API overview" (like https://crates.io/crates/takecell)
+
 # DO NOT USE THIS LIBRARY
 
 As of right now, I have absolutely no idea whether or not this API is sound. You
