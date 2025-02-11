@@ -43,18 +43,46 @@ mod tests {
 
     #[test]
     fn sandbox() {
-        let m1 = "<COMMENTED OUT>";
-        let thing = DerefPair::new("Hi".to_string());
-        let d1 = thing.get_dependent();
-        let o1 = thing.get_owner();
-        let d2 = thing.get_dependent();
-        let d3 = thing.get_dependent();
-        println!("{d3}{m1}{d2}{o1}{d1}");
-        let s: String = thing.into_owner();
-        drop(s);
+        // let m1 = "<COMMENTED OUT>";
+        // let thing = DerefPair::new("Hi".to_string());
+        // let d1 = thing.get_dependent();
+        // let o1 = thing.get_owner();
+        // let d2 = thing.get_dependent();
+        // let d3 = thing.get_dependent();
+        // println!("{d3}{m1}{d2}{o1}{d1}");
+        // let s: String = thing.into_owner();
+        // drop(s);
 
-        let thing = DerefPair::new(vec![1, 2, 3, 4]);
-        println!("{:?}", thing.get_dependent());
+        // let thing = DerefPair::new(vec![1, 2, 3, 4]);
+        // println!("{:?}", thing.get_dependent());
+
+        struct Foo;
+        struct Bar;
+        impl Drop for Foo {
+            fn drop(&mut self) {
+                println!("Dropping Foo");
+            }
+        }
+        impl Drop for Bar {
+            fn drop(&mut self) {
+                println!("Dropping Bar");
+                panic!();
+            }
+        }
+
+        impl Owner for Foo {
+            type Dependent<'a>
+                = Bar
+            where
+                Self: 'a;
+
+            fn make_dependent(&self) -> Self::Dependent<'_> {
+                Bar
+            }
+        }
+
+        let pair = Pair::new(Foo);
+        pair.into_owner();
 
         panic!();
     }

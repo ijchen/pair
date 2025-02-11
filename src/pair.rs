@@ -120,9 +120,14 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// convenience method [`Pair::into_owner`], which moves the owner out of
     /// the box for you to reduce clutter in your code.
     pub fn into_boxed_owner(self) -> Box<O> {
-        // TODO: explain why this is necessary (double free from dropping self),
-        // and why it's important that it comes before the dependent drop (its
-        // destructor may panic)
+        // Prevent dropping `self` at the end of this scope - otherwise, the
+        // Pair drop implementation would attempt to drop the owner and
+        // dependent, which would be... not good (unsound).
+        //
+        // It's important that we do this before calling the dependent's drop,
+        // since a panic in that drop would otherwise cause at least a double
+        // panic, and potentially even unsoundness (although that part I'm less
+        // sure of)
         let this = ManuallyDrop::new(self);
 
         // SAFETY: TODO
