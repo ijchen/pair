@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ptr::NonNull};
+use std::{marker::PhantomData, mem::ManuallyDrop, ptr::NonNull};
 
 use crate::Owner;
 
@@ -120,13 +120,16 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// convenience method [`Pair::into_owner`], which moves the owner out of
     /// the box for you to reduce clutter in your code.
     pub fn into_boxed_owner(self) -> Box<O> {
-        // SAFETY: TODO
-        drop(unsafe { Box::from_raw(self.dependent.cast::<O::Dependent<'_>>().as_ptr()) });
+        // TODO: explain why this is necessary (double free from dropping self),
+        // and why it's important that it comes before the dependent drop (its
+        // destructor may panic)
+        let this = ManuallyDrop::new(self);
 
         // SAFETY: TODO
-        let boxed_owner = unsafe { Box::from_raw(self.owner.as_ptr()) };
+        drop(unsafe { Box::from_raw(this.dependent.cast::<O::Dependent<'_>>().as_ptr()) });
 
-        std::mem::forget(self);
+        // SAFETY: TODO
+        let boxed_owner = unsafe { Box::from_raw(this.owner.as_ptr()) };
 
         boxed_owner
     }
