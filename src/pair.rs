@@ -26,7 +26,7 @@ where
 {
 }
 
-/// A self-referential pair containing both some [`Owner`] and it's
+/// A self-referential pair containing both some [`Owner`] and its
 /// [`Dependent`](Owner::Dependent).
 ///
 /// The owner must be provided to construct a [`Pair`], and the dependent is
