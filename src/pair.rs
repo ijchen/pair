@@ -72,6 +72,9 @@ fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
 }
 
 impl<O: Owner + ?Sized> Pair<O> {
+    // TODO: expose a `try_new` and `try_new_from_box` API (will need updates to
+    // the Owner trait)
+
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
