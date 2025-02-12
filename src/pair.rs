@@ -46,14 +46,26 @@ pub struct Pair<O: Owner + ?Sized> {
     // Type-erased Box<O::Dependent<'self.owner>>
     dependent: NonNull<()>,
 
-    // Need invariance over O.
-    // TODO: explain why (coherence check allows different impls for fn ptrs)
+    // Need invariance over O - if we were covariant or contravariant, two
+    // different `O`s with two different `Owner` impls (and importantly, two
+    // different Dependent associated types) which have a subtype/supertype
+    // relationship could be incorrectly treated as substitutable in a Pair.
+    // That would lead to effectively an unchecked transmute of each field,
+    // which would obviously be unsound.
+    //
+    // Coherence doesn't help us here, since there are types which are able to
+    // have different impls of the same trait, but also have a subtype/supertype
+    // relationship (namely, `fn(&'static T)` and `for<'a> fn(&'a T)` )
     prevent_covariance: PhantomData<*mut O>,
 }
 
-/// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned NonNull TODO:
-/// describe it's properties you can assume (like dereferencability and valid
-/// ways to recover the Box)
+/// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned NonNull is the same
+/// pointer as the Box, and therefore comes with all of Box's representation
+/// guarantees:
+/// - The returned NonNull will be suitably aligned for T
+/// - The returned NonNull will point to a valid T
+/// - The returned NonNull was allocated with the [`Global`](std::alloc::Global)
+/// allocator and a valid [`Layout`](std::alloc::Layout) for `T`.
 fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     // See: https://github.com/rust-lang/rust/issues/47336#issuecomment-586578713
     NonNull::from(Box::leak(value))
@@ -80,13 +92,18 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// you to reduce clutter in your code.
     pub fn new_from_box(owner: Box<O>) -> Self {
         // Convert owner into a NonNull, so we are no longer restricted by the
-        // invariants of Box (like noalias)
+        // aliasing requirements of Box
         let owner = non_null_from_box(owner);
 
         // Borrow `owner` to construct `dependent`. This borrow conceptually
         // lasts from now until drop, where we will drop `dependent` and then
         // drop owner.
-        // SAFETY: TODO
+
+        // SAFETY: `owner` was just converted from a valid Box, and inherits the
+        // alignment and validity guarantees of Box. Additionally, the value
+        // behind the pointer is currently not borrowed at all - this marks the
+        // beginning of a shared borrow which will last until the returned
+        // `Pair` is dropped.
         let dependent = unsafe { owner.as_ref() }.make_dependent();
 
         // Type-erase dependent so it's inexpressible self-referential lifetime
