@@ -162,10 +162,16 @@ impl<O: Owner + ?Sized> Pair<O> {
         // sure of)
         let this = ManuallyDrop::new(self);
 
-        // SAFETY: TODO
+        // SAFETY: `this.dependent` was originally created from a Box, and never
+        // invalidated since then. Because we took ownership of `self`, we know
+        // there are no outstanding borrows to the dependent. Therefore,
+        // reconstructing the original Box<O::Dependent<'_>> is okay.
         drop(unsafe { Box::from_raw(this.dependent.cast::<O::Dependent<'_>>().as_ptr()) });
 
-        // SAFETY: TODO
+        // SAFETY: `this.owner` was originally created from a Box, and never
+        // invalidated since then. Because we took ownership of `self`, and we
+        // just dropped the dependent, we know there are no outstanding borrows
+        // to owner. Therefore, reconstructing the original Box<O> is okay.
         let boxed_owner = unsafe { Box::from_raw(this.owner.as_ptr()) };
 
         boxed_owner
