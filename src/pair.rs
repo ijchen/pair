@@ -194,11 +194,19 @@ impl<O: Owner + ?Sized> Pair<O> {
 impl<O: Owner + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
         // Call `Drop::drop` on the dependent `O::Dependent<'_>`
-        // SAFETY: TODO
+
+        // SAFETY: `self.dependent` was originally created from a Box, and never
+        // invalidated since then. Because we are in drop, we know there are no
+        // outstanding borrows to the dependent. Therefore, reconstructing the
+        // original Box<O::Dependent<'_>> is okay.
         drop(unsafe { Box::from_raw(self.dependent.cast::<O::Dependent<'_>>().as_ptr()) });
 
         // Call `Drop::drop` on the owner `Box<O>`
-        // SAFETY: TODO
+
+        // SAFETY: `this.owner` was originally created from a Box, and never
+        // invalidated since then. Because we are in drop, and we just dropped
+        // the dependent, we know there are no outstanding borrows to owner.
+        // Therefore, reconstructing the original Box<O> is okay.
         drop(unsafe { Box::from_raw(self.owner.as_ptr()) });
     }
 }
