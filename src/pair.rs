@@ -121,7 +121,13 @@ impl<O: Owner + ?Sized> Pair<O> {
 
     /// Returns a reference to the owner.
     pub fn get_owner(&self) -> &O {
-        // SAFETY: TODO
+        // SAFETY: `self.owner` was originally converted from a valid Box, and
+        // inherited the alignment and validity guarantees of Box - and neither
+        // our code nor any of our exposed APIs could have invalidated those
+        // since construction. Additionally, the value behind the pointer is
+        // currently in a shared borrow state (no exclusive borrows, no other
+        // code assuming unique ownership), and will be until the Pair is
+        // dropped. Here, we only add another shared borrow.
         unsafe { self.owner.as_ref() }
     }
 
