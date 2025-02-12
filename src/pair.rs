@@ -133,8 +133,17 @@ impl<O: Owner + ?Sized> Pair<O> {
 
     /// Returns a reference to the dependent.
     pub fn get_dependent(&self) -> &O::Dependent<'_> {
-        // SAFETY: TODO
-        unsafe { self.dependent.cast().as_ref() }
+        // SAFETY: `self.dependent` was originally converted from a valid
+        // Box<O::Dependent<'_>>, and type-erased to a NonNull<()>. As such, it
+        // inherited the alignment and validity guarantees of Box (for an
+        // O::Dependent<'_>) - and neither our code nor any of our exposed APIs
+        // could have invalidated those since construction. Additionally, the
+        // value behind the pointer is currently either not borrowed at all, or
+        // in a shared borrow state (no exclusive borrows, no other code
+        // assuming unique ownership), and will remain in one of those two
+        // states until the Pair is dropped. Here, we only either create the
+        // first shared borrow, or add another.
+        unsafe { self.dependent.cast::<O::Dependent<'_>>().as_ref() }
     }
 
     /// Consumes the [`Pair`], dropping the dependent and returning the owner.
