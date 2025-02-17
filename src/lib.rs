@@ -1,7 +1,10 @@
+mod as_ref;
+mod deref;
 mod owner;
 mod pair;
 
-pub use owner::Owner;
+pub use as_ref::AsRefPair;
+pub use owner::{HasDependent, Owner};
 pub use pair::Pair;
 
 // TODO: *extensive* testing, including:
@@ -11,6 +14,15 @@ pub use pair::Pair;
 // Drop impls, impure Deref impls, etc.
 // - https://docs.rs/trybuild test cases demonstrating that misuses of your API don't compile
 // - All under MIRI
+
+// impl<'any> ForLt<'any> for String {
+//     type Dependent = &'any str;
+// }
+// impl Owner for String {
+//     fn make_dependent(&self) -> <Self as ForLt<'_>>::Dependent {
+//         self
+//     }
+// }
 
 // #[cfg(test)]
 // mod tests {
@@ -35,53 +47,52 @@ pub use pair::Pair;
 //     }
 // }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn sandbox() {
-//         let m1 = "<COMMENTED OUT>";
-//         let thing = DerefPair::new("Hi".to_string());
-//         let d1 = thing.get_dependent();
-//         let o1 = thing.get_owner();
-//         let d2 = thing.get_dependent();
-//         let d3 = thing.get_dependent();
-//         println!("{d3}{m1}{d2}{o1}{d1}");
-//         let s: String = thing.into_owner();
-//         drop(s);
+    #[test]
+    fn sandbox() {
+        let thing = Pair::new_deref("Hi".to_string());
+        let d1 = thing.with_dependent(|dep| dep);
+        let o1 = &thing.get_owner().0;
+        let d2 = thing.with_dependent(|dep| dep);
+        let d3 = thing.with_dependent(|dep| dep);
+        println!("{d3}{d2}{o1}{d1}");
+        let s: String = thing.into_owner().0;
+        drop(s);
 
-//         // let thing = DerefPair::new(vec![1, 2, 3, 4]);
-//         // println!("{:?}", thing.get_dependent());
+        // let thing = DerefPair::new(vec![1, 2, 3, 4]);
+        // println!("{:?}", thing.get_dependent());
 
-//         // struct Foo;
-//         // struct Bar;
-//         // impl Drop for Foo {
-//         //     fn drop(&mut self) {
-//         //         println!("Dropping Foo");
-//         //     }
-//         // }
-//         // impl Drop for Bar {
-//         //     fn drop(&mut self) {
-//         //         println!("Dropping Bar");
-//         //         panic!();
-//         //     }
-//         // }
+        // struct Foo;
+        // struct Bar;
+        // impl Drop for Foo {
+        //     fn drop(&mut self) {
+        //         println!("Dropping Foo");
+        //     }
+        // }
+        // impl Drop for Bar {
+        //     fn drop(&mut self) {
+        //         println!("Dropping Bar");
+        //         panic!();
+        //     }
+        // }
 
-//         // impl Owner for Foo {
-//         //     type Dependent<'a>
-//         //         = Bar
-//         //     where
-//         //         Self: 'a;
+        // impl Owner for Foo {
+        //     type Dependent<'a>
+        //         = Bar
+        //     where
+        //         Self: 'a;
 
-//         //     fn make_dependent(&self) -> Self::Dependent<'_> {
-//         //         Bar
-//         //     }
-//         // }
+        //     fn make_dependent(&self) -> Self::Dependent<'_> {
+        //         Bar
+        //     }
+        // }
 
-//         // let pair = Pair::new(Foo);
-//         // pair.into_owner();
+        // let pair = Pair::new(Foo);
+        // pair.into_owner();
 
-//         // panic!();
-//     }
-// }
+        panic!();
+    }
+}

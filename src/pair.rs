@@ -12,17 +12,17 @@
 
 use std::{marker::PhantomData, mem::ManuallyDrop, ptr::NonNull};
 
-use crate::Owner;
+use crate::{owner::HasDependent, Owner};
 
 // SAFETY: `Pair` has no special thread-related invariants or requirements, so
 // sending a `Pair` to another thread could only cause problems if sending
 // either the owner or the dependent to another thread could cause problems
 // (since both are semantically moved with and made accessible through the
 // `Pair`).
-unsafe impl<O: for<'any> Owner<'any> + ?Sized> Send for Pair<O>
+unsafe impl<O: Owner + ?Sized> Send for Pair<O>
 where
     O: Send,
-    for<'any> <O as Owner<'any>>::Dependent: Send,
+    for<'any> <O as HasDependent<'any>>::Dependent: Send,
 {
 }
 
@@ -31,10 +31,10 @@ where
 // problems if sharing a reference to either the owner or the dependent across
 // multiple threads could cause problems (since references to both are made
 // accessible through references to the `Pair`).
-unsafe impl<O: for<'any> Owner<'any>> Sync for Pair<O>
+unsafe impl<O: Owner> Sync for Pair<O>
 where
     O: Sync,
-    for<'any> <O as Owner<'any>>::Dependent: Sync,
+    for<'any> <O as HasDependent<'any>>::Dependent: Sync,
 {
 }
 
@@ -50,7 +50,7 @@ where
 /// Conceptually, the pair itself has ownership over the owner `O`, the owner is
 /// immutably borrowed by the dependent for the lifetime of the pair, and the
 /// dependent is owned by the pair and valid for the pair's lifetime.
-pub struct Pair<O: for<'any> Owner<'any> + ?Sized> {
+pub struct Pair<O: Owner + ?Sized> {
     // Derived from a Box<O>
     // Immutably borrowed by `self.dependent` from construction until drop
     owner: NonNull<O>,
@@ -83,7 +83,7 @@ fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     NonNull::from(Box::leak(value))
 }
 
-impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
+impl<O: Owner + ?Sized> Pair<O> {
     // TODO: expose a `try_new` and `try_new_from_box` API (will need updates to
     // the Owner trait)
 
@@ -124,7 +124,8 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         // Type-erase dependent so it's inexpressible self-referential lifetime
         // goes away (we know that it's borrowing self.owner immutably from
         // construction (now) until drop)
-        let dependent: NonNull<O::Dependent> = non_null_from_box(Box::new(dependent));
+        let dependent: NonNull<<O as HasDependent<'_>>::Dependent> =
+            non_null_from_box(Box::new(dependent));
         let dependent: NonNull<()> = dependent.cast();
 
         Self {
@@ -149,12 +150,16 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
     /// TODO
     // TODO: The compiler will allow us to elide this generic  vvvv lifetime
     // what does it default to? This feels suspicious to me.   vvvv
-    pub fn with_dependent<'a, F: for<'b> FnOnce(&'a <O as Owner<'b>>::Dependent) -> T, T>(
+    pub fn with_dependent<'a, F: for<'b> FnOnce(&'a <O as HasDependent<'b>>::Dependent) -> U, U>(
         &'a self,
         f: F,
-    ) -> T {
+    ) -> U {
         // SAFETY: TODO
-        let dependent = unsafe { self.dependent.cast::<O::Dependent>().as_ref() };
+        let dependent = unsafe {
+            self.dependent
+                .cast::<<O as HasDependent<'_>>::Dependent>()
+                .as_ref()
+        };
 
         f(dependent)
     }
@@ -162,14 +167,18 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
     /// TODO
     pub fn with_dependent_mut<
         'a,
-        F: for<'b> FnOnce(&'a mut <O as Owner<'b>>::Dependent) -> T,
+        F: for<'b> FnOnce(&'a mut <O as HasDependent<'b>>::Dependent) -> T,
         T,
     >(
         &'a mut self,
         f: F,
     ) -> T {
         // SAFETY: TODO
-        let dependent = unsafe { self.dependent.cast::<O::Dependent>().as_mut() };
+        let dependent = unsafe {
+            self.dependent
+                .cast::<<O as HasDependent<'_>>::Dependent>()
+                .as_mut()
+        };
 
         f(dependent)
     }
@@ -194,7 +203,13 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         // invalidated since then. Because we took ownership of `self`, we know
         // there are no outstanding borrows to the dependent. Therefore,
         // reconstructing the original Box<O::Dependent<'_>> is okay.
-        drop(unsafe { Box::from_raw(this.dependent.cast::<O::Dependent>().as_ptr()) });
+        drop(unsafe {
+            Box::from_raw(
+                this.dependent
+                    .cast::<<O as HasDependent<'_>>::Dependent>()
+                    .as_ptr(),
+            )
+        });
 
         // SAFETY: `this.owner` was originally created from a Box, and never
         // invalidated since then. Because we took ownership of `self`, and we
@@ -219,7 +234,7 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
 
 /// The [`Drop`] implementation for [`Pair`] will drop both the dependent and
 /// the owner, in that order.
-impl<O: for<'any> Owner<'any> + ?Sized> Drop for Pair<O> {
+impl<O: Owner + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
         // Call `Drop::drop` on the dependent `O::Dependent<'_>`
 
@@ -227,7 +242,13 @@ impl<O: for<'any> Owner<'any> + ?Sized> Drop for Pair<O> {
         // invalidated since then. Because we are in drop, we know there are no
         // outstanding borrows to the dependent. Therefore, reconstructing the
         // original Box<O::Dependent<'_>> is okay.
-        drop(unsafe { Box::from_raw(self.dependent.cast::<O::Dependent>().as_ptr()) });
+        drop(unsafe {
+            Box::from_raw(
+                self.dependent
+                    .cast::<<O as HasDependent<'_>>::Dependent>()
+                    .as_ptr(),
+            )
+        });
 
         // Call `Drop::drop` on the owner `Box<O>`
 
