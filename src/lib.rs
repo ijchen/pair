@@ -1,9 +1,9 @@
-mod as_ref;
-mod deref;
+mod convenience;
 mod owner;
 mod pair;
+mod ref_owner;
 
-pub use as_ref::AsRefPair;
+pub use convenience::{AsRefPair, BorrowPair, DerefPair};
 pub use owner::{HasDependent, Owner};
 pub use pair::Pair;
 
@@ -53,13 +53,13 @@ mod tests {
 
     #[test]
     fn sandbox() {
-        let thing = Pair::new_deref("Hi".to_string());
-        let d1 = thing.with_dependent(|dep| dep);
-        let o1 = &thing.get_owner().0;
-        let d2 = thing.with_dependent(|dep| dep);
-        let d3 = thing.with_dependent(|dep| dep);
+        let thing = DerefPair::new("Hi".to_string());
+        let d1 = thing.get_dependent();
+        let o1 = thing.get_owner();
+        let d2 = thing.with_dependent(|dep| dep.to_string());
+        let d3 = thing.get_dependent();
         println!("{d3}{d2}{o1}{d1}");
-        let s: String = thing.into_owner().0;
+        let s: String = thing.into_owner();
         drop(s);
 
         // let thing = DerefPair::new(vec![1, 2, 3, 4]);
