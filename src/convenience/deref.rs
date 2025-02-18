@@ -1,6 +1,8 @@
 use std::ops::Deref;
 
-use crate::{ref_owner::RefOwner, Pair};
+use crate::Pair;
+
+use super::RefOwner;
 
 pub struct DerefPair<O: Deref>(Pair<RefOwner<O, O::Target>>);
 

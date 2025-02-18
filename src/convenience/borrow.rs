@@ -1,6 +1,8 @@
 use std::borrow::Borrow;
 
-use crate::{ref_owner::RefOwner, Pair};
+use crate::Pair;
+
+use super::RefOwner;
 
 pub struct BorrowPair<O: Borrow<D>, D: ?Sized>(Pair<RefOwner<O, D>>);
 

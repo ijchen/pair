@@ -1,6 +1,8 @@
 use std::convert::AsRef;
 
-use crate::{ref_owner::RefOwner, Pair};
+use crate::Pair;
+
+use super::RefOwner;
 
 pub struct AsRefPair<O: AsRef<D>, D: ?Sized>(Pair<RefOwner<O, D>>);
 

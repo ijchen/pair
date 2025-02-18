@@ -1,7 +1,6 @@
 mod convenience;
 mod owner;
 mod pair;
-mod ref_owner;
 
 pub use convenience::{AsRefPair, BorrowPair, DerefPair};
 pub use owner::{HasDependent, Owner};

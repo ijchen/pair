@@ -1,6 +1,6 @@
 use crate::{HasDependent, Owner};
 
-pub(crate) struct RefOwner<O, D: ?Sized> {
+pub struct RefOwner<O, D: ?Sized> {
     owner: O,
     f: fn(&O) -> &D,
 }
