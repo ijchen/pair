@@ -23,7 +23,14 @@ impl<'any, O, D: ?Sized> HasDependent<'any> for RefOwner<O, D> {
     type Dependent = &'any D;
 }
 impl<O, D: ?Sized> Owner for RefOwner<O, D> {
-    fn make_dependent(&self) -> <Self as HasDependent<'_>>::Dependent {
-        (self.f)(&self.owner)
+    type Context = ();
+
+    type Err = std::convert::Infallible;
+
+    fn make_dependent(
+        &self,
+        (): Self::Context,
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+        Ok((self.f)(&self.owner))
     }
 }

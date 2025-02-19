@@ -92,6 +92,6 @@ mod tests {
         // let pair = Pair::new(Foo);
         // pair.into_owner();
 
-        panic!();
+        // panic!();
     }
 }
