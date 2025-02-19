@@ -4,23 +4,20 @@ use crate::Pair;
 
 use super::RefOwner;
 
-pub struct BorrowPair<O: Borrow<D>, D: ?Sized>(Pair<RefOwner<O, D>>);
+pub struct BorrowPair<T: Borrow<U>, U: ?Sized>(Pair<RefOwner<T, U>>);
 
-impl<O: Borrow<D>, D: ?Sized> BorrowPair<O, D> {
-    pub fn new(owner: O) -> Self {
+impl<T: Borrow<U>, U: ?Sized> BorrowPair<T, U> {
+    pub fn new(owner: T) -> Self {
         Self(Pair::new(RefOwner::new(owner, |owner| owner.borrow())))
     }
 
-    pub fn get_owner(&self) -> &O {
+    pub fn get_owner(&self) -> &T {
         self.0.get_owner().owner()
     }
-    pub fn with_dependent<'a, F: for<'b> FnOnce(&'b D) -> T, T>(&'a self, f: F) -> T {
-        self.0.with_dependent(|dependent| f(dependent))
-    }
-    pub fn get_dependent(&self) -> &D {
+    pub fn get_dependent(&self) -> &U {
         self.0.with_dependent(|dependent| dependent)
     }
-    pub fn into_owner(self) -> O {
+    pub fn into_owner(self) -> T {
         self.0.into_owner().into_owner()
     }
 }

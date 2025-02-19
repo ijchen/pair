@@ -55,7 +55,7 @@ mod tests {
         let thing = DerefPair::new("Hi".to_string());
         let d1 = thing.get_dependent();
         let o1 = thing.get_owner();
-        let d2 = thing.with_dependent(|dep| dep.to_string());
+        let d2 = thing.get_dependent().to_string();
         let d3 = thing.get_dependent();
         println!("{d3}{d2}{o1}{d1}");
         let s: String = thing.into_owner();
