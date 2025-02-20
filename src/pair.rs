@@ -1,6 +1,6 @@
-use std::{marker::PhantomData, mem::ManuallyDrop, ptr::NonNull};
+use std::{convert::Infallible, fmt::Debug, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull};
 
-use crate::Owner;
+use crate::{HasDependent, Owner};
 
 // SAFETY: `Pair` has no special thread-related invariants or requirements, so
 // sending a `Pair` to another thread could only cause problems if sending
@@ -10,7 +10,7 @@ use crate::Owner;
 unsafe impl<O: Owner + ?Sized> Send for Pair<O>
 where
     O: Send,
-    for<'a> O::Dependent<'a>: Send,
+    for<'any> <O as HasDependent<'any>>::Dependent: Send,
 {
 }
 
@@ -22,12 +22,12 @@ where
 unsafe impl<O: Owner> Sync for Pair<O>
 where
     O: Sync,
-    for<'a> O::Dependent<'a>: Sync,
+    for<'any> <O as HasDependent<'any>>::Dependent: Sync,
 {
 }
 
 /// A self-referential pair containing both some [`Owner`] and its
-/// [`Dependent`](Owner::Dependent).
+/// [`Dependent`](HasDependent::Dependent).
 ///
 /// The owner must be provided to construct a [`Pair`], and the dependent is
 /// immediately created (borrowing from the owner). Both are stored together in
@@ -43,12 +43,12 @@ pub struct Pair<O: Owner + ?Sized> {
     // Immutably borrowed by `self.dependent` from construction until drop
     owner: NonNull<O>,
 
-    // Type-erased Box<O::Dependent<'self.owner>>
+    // Type-erased Box<<O as HasDependent<'self.owner>>::Dependent>
     dependent: NonNull<()>,
 
     // Need invariance over O - if we were covariant or contravariant, two
     // different `O`s with two different `Owner` impls (and importantly, two
-    // different Dependent associated types) which have a subtype/supertype
+    // different associated types in HasDependent) which have a sub/supertype
     // relationship could be incorrectly treated as substitutable in a Pair.
     // That would lead to effectively an unchecked transmute of each field,
     // which would obviously be unsound.
@@ -65,35 +65,48 @@ pub struct Pair<O: Owner + ?Sized> {
 /// - The returned NonNull will be suitably aligned for T
 /// - The returned NonNull will point to a valid T
 /// - The returned NonNull was allocated with the [`Global`](std::alloc::Global)
-/// allocator and a valid [`Layout`](std::alloc::Layout) for `T`.
+///   allocator and a valid [`Layout`](std::alloc::Layout) for `T`.
 fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     // See: https://github.com/rust-lang/rust/issues/47336#issuecomment-586578713
     NonNull::from(Box::leak(value))
 }
 
 impl<O: Owner + ?Sized> Pair<O> {
-    // TODO: expose a `try_new` and `try_new_from_box` API (will need updates to
-    // the Owner trait)
-
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you already have a [`Box`]ed owner, consider [`Pair::new_from_box`]
-    /// to avoid redundant reallocation.
-    pub fn new(owner: O) -> Self
+    /// If you already have a [`Box`]ed owner, consider
+    /// [`Pair::try_new_from_box_with_context`] to avoid redundant reallocation.
+    ///
+    /// If you don't need to provide any context, consider the convenience
+    /// constructor [`Pair::try_new`], which doesn't require a context.
+    ///
+    /// If this construction can't fail, consider the convenience constructor
+    /// [`Pair::new_with_context`], which returns `Self` directly.
+    pub fn try_new_with_context(owner: O, context: O::Context) -> Result<Self, (O, O::Err)>
     where
         O: Sized,
     {
-        Self::new_from_box(Box::new(owner))
+        Self::try_new_from_box_with_context(Box::new(owner), context)
+            .map_err(|(owner, err)| (*owner, err))
     }
 
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
     /// If you have an unboxed `O` and only box it for this function, consider
-    /// the convenience constructor [`Pair::new`], which boxes the owner for
-    /// you to reduce clutter in your code.
-    pub fn new_from_box(owner: Box<O>) -> Self {
+    /// the convenience constructor [`Pair::try_new_with_context`], which boxes
+    /// the owner for you.
+    ///
+    /// If you don't need to provide any context, consider the convenience
+    /// constructor [`Pair::try_new_from_box`], which doesn't require a context.
+    ///
+    /// If this construction can't fail, consider the convenience constructor
+    /// [`Pair::new_from_box_with_context`], which returns `Self` directly.
+    pub fn try_new_from_box_with_context(
+        owner: Box<O>,
+        context: O::Context,
+    ) -> Result<Self, (Box<O>, O::Err)> {
         // Convert owner into a NonNull, so we are no longer restricted by the
         // aliasing requirements of Box
         let owner = non_null_from_box(owner);
@@ -106,20 +119,38 @@ impl<O: Owner + ?Sized> Pair<O> {
         // alignment and validity guarantees of Box. Additionally, the value
         // behind the pointer is currently not borrowed at all - this marks the
         // beginning of a shared borrow which will last until the returned
-        // `Pair` is dropped.
-        let dependent = unsafe { owner.as_ref() }.make_dependent();
+        // `Pair` is dropped (or immediately, if `make_dependent` returns an
+        // error).
+        let maybe_dependent = unsafe { owner.as_ref() }.make_dependent(context);
+
+        // If `make_dependent(..)` failed, early return out from this function.
+        let dependent = match maybe_dependent {
+            Ok(dependent) => dependent,
+            Err(err) => {
+                // SAFETY: `owner` was just created from a Box earlier in this
+                // function, and not invalidated since then. Because we haven't
+                // given away access to a `Self`, and the one borrow we took of
+                // the dependent to pass to `make_dependent` has expired, we
+                // know there are no outstanding borrows to owner. Therefore,
+                // reconstructing the original Box<O> is okay.
+                let owner: Box<O> = unsafe { Box::from_raw(owner.as_ptr()) };
+
+                return Err((owner, err));
+            }
+        };
 
         // Type-erase dependent so it's inexpressible self-referential lifetime
         // goes away (we know that it's borrowing self.owner immutably from
         // construction (now) until drop)
-        let dependent: NonNull<O::Dependent<'_>> = non_null_from_box(Box::new(dependent));
+        let dependent: NonNull<<O as HasDependent<'_>>::Dependent> =
+            non_null_from_box(Box::new(dependent));
         let dependent: NonNull<()> = dependent.cast();
 
-        Self {
+        Ok(Self {
             owner,
             dependent,
             prevent_covariance: PhantomData,
-        }
+        })
     }
 
     /// Returns a reference to the owner.
@@ -134,24 +165,76 @@ impl<O: Owner + ?Sized> Pair<O> {
         unsafe { self.owner.as_ref() }
     }
 
-    /// TODO
-    pub fn with_dependent<'a, F: for<'b> FnOnce(&'a O::Dependent<'b>) -> T, T>(
-        &'a self,
+    /// Calls the given closure, providing shared access to the dependent, and
+    /// returns the value computed by the closure.
+    ///
+    /// The closure must be able to work with a
+    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
+    /// lives at least as long as the borrow of `self`. This is important
+    /// because the dependent may be invariant over its lifetime, and the
+    /// correct lifetime (lasting from the construction of `self` until drop) is
+    /// impossible to express. For dependent types covariant over their
+    /// lifetime, the closure may simply return the reference to the dependent,
+    /// which may then be used as if this function directly returned a
+    /// reference.
+    pub fn with_dependent<
+        'self_borrow,
+        F: for<'any> FnOnce(&'self_borrow <O as HasDependent<'any>>::Dependent) -> T,
+        T,
+    >(
+        &'self_borrow self,
         f: F,
     ) -> T {
-        // SAFETY: TODO
-        let dependent = unsafe { self.dependent.cast::<O::Dependent<'_>>().as_ref() };
+        // SAFETY: `self.dependent` was originally converted from a valid
+        // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
+        // NonNull<()>. As such, it inherited the alignment and validity
+        // guarantees of Box (for an <O as HasDependent<'_>>::Dependent) - and
+        // neither our code nor any of our exposed APIs could have invalidated
+        // those since construction. Additionally, because we have a shared
+        // reference to self, we know that the value behind the pointer is
+        // currently either not borrowed at all, or in a shared borrow state
+        // (no exclusive borrows, no other code assuming unique ownership).
+        // Here, we only either create the first shared borrow, or add another.
+        let dependent: &<O as HasDependent<'_>>::Dependent = unsafe {
+            self.dependent
+                .cast::<<O as HasDependent<'_>>::Dependent>()
+                .as_ref()
+        };
 
         f(dependent)
     }
 
-    /// TODO
-    pub fn with_dependent_mut<'a, F: for<'b> FnOnce(&'a mut O::Dependent<'b>) -> T, T>(
-        &'a mut self,
+    /// Calls the given closure, providing exclusive access to the dependent,
+    /// and returns the value computed by the closure.
+    ///
+    /// The closure must be able to work with a
+    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
+    /// lives at least as long as the borrow of `self`. This is important
+    /// because mutable references are invariant over their type `T`, and the
+    /// exact T here (a `Dependent` with a very specific lifetime lasting from
+    /// the construction of `self` until drop) is impossible to express.
+    pub fn with_dependent_mut<
+        'self_borrow,
+        F: for<'any> FnOnce(&'self_borrow mut <O as HasDependent<'any>>::Dependent) -> T,
+        T,
+    >(
+        &'self_borrow mut self,
         f: F,
     ) -> T {
-        // SAFETY: TODO
-        let dependent = unsafe { self.dependent.cast::<O::Dependent<'_>>().as_mut() };
+        // SAFETY: `self.dependent` was originally converted from a valid
+        // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
+        // NonNull<()>. As such, it inherited the alignment and validity
+        // guarantees of Box (for an <O as HasDependent<'_>>::Dependent) - and
+        // neither our code nor any of our exposed APIs could have invalidated
+        // those since construction. Additionally, because we have an exclusive
+        // reference to self, we know that the value behind the pointer is
+        // currently not borrowed at all, and can't be until the mutable borrow
+        // of `self` expires.
+        let dependent: &mut <O as HasDependent<'_>>::Dependent = unsafe {
+            self.dependent
+                .cast::<<O as HasDependent<'_>>::Dependent>()
+                .as_mut()
+        };
 
         f(dependent)
     }
@@ -160,11 +243,11 @@ impl<O: Owner + ?Sized> Pair<O> {
     ///
     /// If you don't need the returned owner in a [`Box`], consider the
     /// convenience method [`Pair::into_owner`], which moves the owner out of
-    /// the box for you to reduce clutter in your code.
+    /// the box for you.
     pub fn into_boxed_owner(self) -> Box<O> {
         // Prevent dropping `self` at the end of this scope - otherwise, the
         // Pair drop implementation would attempt to drop the owner and
-        // dependent, which would be... not good (unsound).
+        // dependent again, which would be... not good (unsound).
         //
         // It's important that we do this before calling the dependent's drop,
         // since a panic in that drop would otherwise cause at least a double
@@ -175,16 +258,21 @@ impl<O: Owner + ?Sized> Pair<O> {
         // SAFETY: `this.dependent` was originally created from a Box, and never
         // invalidated since then. Because we took ownership of `self`, we know
         // there are no outstanding borrows to the dependent. Therefore,
-        // reconstructing the original Box<O::Dependent<'_>> is okay.
-        drop(unsafe { Box::from_raw(this.dependent.cast::<O::Dependent<'_>>().as_ptr()) });
+        // reconstructing the original Box<<O as HasDependent<'_>>::Dependent>
+        // is okay.
+        drop(unsafe {
+            Box::from_raw(
+                this.dependent
+                    .cast::<<O as HasDependent<'_>>::Dependent>()
+                    .as_ptr(),
+            )
+        });
 
         // SAFETY: `this.owner` was originally created from a Box, and never
         // invalidated since then. Because we took ownership of `self`, and we
         // just dropped the dependent, we know there are no outstanding borrows
         // to owner. Therefore, reconstructing the original Box<O> is okay.
-        let boxed_owner = unsafe { Box::from_raw(this.owner.as_ptr()) };
-
-        boxed_owner
+        unsafe { Box::from_raw(this.owner.as_ptr()) }
     }
 
     /// Consumes the [`Pair`], dropping the dependent and returning the owner.
@@ -199,24 +287,164 @@ impl<O: Owner + ?Sized> Pair<O> {
     }
 }
 
+impl<O: Owner<Context = (), Err = Infallible> + ?Sized> Pair<O> {
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
+    /// be computed through [`Owner::make_dependent`] during this construction.
+    ///
+    /// If you already have a [`Box`]ed owner, consider [`Pair::new_from_box`]
+    /// to avoid redundant reallocation.
+    ///
+    /// If you need to provide some additional arguments/context to this
+    /// constructor, consider [`Pair::new_with_context`], which allows passing
+    /// in additional data.
+    ///
+    /// If this construction can fail, consider [`Pair::try_new`], which returns
+    /// a [`Result`].
+    pub fn new(owner: O) -> Self
+    where
+        O: Sized,
+    {
+        Self::new_with_context(owner, ())
+    }
+
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
+    /// be computed through [`Owner::make_dependent`] during this construction.
+    ///
+    /// If you have an unboxed `O` and only box it for this function, consider
+    /// the convenience constructor [`Pair::new`], which boxes the owner for
+    /// you.
+    ///
+    /// If you need to provide some additional arguments/context to this
+    /// constructor, consider [`Pair::new_from_box_with_context`], which allows
+    /// passing in additional data.
+    ///
+    /// If this construction can fail, consider [`Pair::try_new_from_box`],
+    /// which returns a [`Result`].
+    pub fn new_from_box(owner: Box<O>) -> Self {
+        Self::new_from_box_with_context(owner, ())
+    }
+}
+
+impl<O: Owner<Context = ()> + ?Sized> Pair<O> {
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
+    /// be computed through [`Owner::make_dependent`] during this construction.
+    ///
+    /// If you already have a [`Box`]ed owner, consider
+    /// [`Pair::try_new_from_box`] to avoid redundant reallocation.
+    ///
+    /// If you need to provide some additional arguments/context to this
+    /// constructor, consider [`Pair::try_new_with_context`], which allows
+    /// passing in additional data.
+    ///
+    /// If this construction can't fail, consider the convenience constructor
+    /// [`Pair::new`], which returns `Self` directly.
+    pub fn try_new(owner: O) -> Result<Self, (O, O::Err)>
+    where
+        O: Sized,
+    {
+        Self::try_new_with_context(owner, ())
+    }
+
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
+    /// be computed through [`Owner::make_dependent`] during this construction.
+    ///
+    /// If you have an unboxed `O` and only box it for this function, consider
+    /// the convenience constructor [`Pair::try_new`], which boxes the owner for
+    /// you.
+    ///
+    /// If you need to provide some additional arguments/context to this
+    /// constructor, consider [`Pair::try_new_from_box_with_context`], which
+    /// allows passing in additional data.
+    ///
+    /// If this construction can't fail, consider the convenience constructor
+    /// [`Pair::new_from_box`], which returns `Self` directly.
+    pub fn try_new_from_box(owner: Box<O>) -> Result<Self, (Box<O>, O::Err)> {
+        Self::try_new_from_box_with_context(owner, ())
+    }
+}
+
+impl<O: Owner<Err = Infallible> + ?Sized> Pair<O> {
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
+    /// be computed through [`Owner::make_dependent`] during this construction.
+    ///
+    /// If you already have a [`Box`]ed owner, consider
+    /// [`Pair::new_from_box_with_context`] to avoid redundant reallocation.
+    ///
+    /// If you don't need to provide any context, consider the convenience
+    /// constructor [`Pair::new`], which doesn't require a context.
+    ///
+    /// If this construction can fail, consider [`Pair::try_new_with_context`],
+    /// which returns a [`Result`].
+    pub fn new_with_context(owner: O, context: O::Context) -> Self
+    where
+        O: Sized,
+    {
+        let Ok(pair) = Self::try_new_with_context(owner, context);
+        pair
+    }
+
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
+    /// be computed through [`Owner::make_dependent`] during this construction.
+    ///
+    /// If you have an unboxed `O` and only box it for this function, consider
+    /// the convenience constructor [`Pair::new_with_context`], which boxes the
+    /// owner for you.
+    ///
+    /// If you don't need to provide any context, consider the convenience
+    /// constructor [`Pair::new_from_box`], which doesn't require a context.
+    ///
+    /// If this construction can fail, consider
+    /// [`Pair::try_new_from_box_with_context`], which returns a [`Result`].
+    pub fn new_from_box_with_context(owner: Box<O>, context: O::Context) -> Self {
+        let Ok(pair) = Self::try_new_from_box_with_context(owner, context);
+        pair
+    }
+}
+
 /// The [`Drop`] implementation for [`Pair`] will drop both the dependent and
 /// the owner, in that order.
 impl<O: Owner + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
-        // Call `Drop::drop` on the dependent `O::Dependent<'_>`
+        // Drop the dependent `Box<<O as HasDependent<'_>>::Dependent>`
 
         // SAFETY: `self.dependent` was originally created from a Box, and never
         // invalidated since then. Because we are in drop, we know there are no
         // outstanding borrows to the dependent. Therefore, reconstructing the
-        // original Box<O::Dependent<'_>> is okay.
-        drop(unsafe { Box::from_raw(self.dependent.cast::<O::Dependent<'_>>().as_ptr()) });
+        // original Box<<O as HasDependent<'_>>::Dependent> is okay.
+        drop(unsafe {
+            Box::from_raw(
+                self.dependent
+                    .cast::<<O as HasDependent<'_>>::Dependent>()
+                    .as_ptr(),
+            )
+        });
 
-        // Call `Drop::drop` on the owner `Box<O>`
+        // Drop the owner `Box<O>`
 
         // SAFETY: `this.owner` was originally created from a Box, and never
         // invalidated since then. Because we are in drop, and we just dropped
         // the dependent, we know there are no outstanding borrows to owner.
         // Therefore, reconstructing the original Box<O> is okay.
         drop(unsafe { Box::from_raw(self.owner.as_ptr()) });
+    }
+}
+
+impl<O: Owner + Debug + ?Sized> Debug for Pair<O>
+where
+    for<'any> <O as HasDependent<'any>>::Dependent: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.with_dependent(|dependent| {
+            f.debug_struct("Pair")
+                .field("owner", &self.get_owner())
+                .field("dependent", dependent)
+                .finish()
+        })
+    }
+}
+
+impl<O: Owner<Context = (), Err = Infallible> + Default> Default for Pair<O> {
+    fn default() -> Self {
+        Self::new(O::default())
     }
 }
