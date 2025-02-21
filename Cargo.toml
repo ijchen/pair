@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/ijchen/pair"
 documentation = "https://docs.rs/pair"
-edition = "2021"
+edition = "2024"
 include = ["/src/", "/Cargo.toml", "/README.md", "/LICENSE-*"]
 publish = false
 

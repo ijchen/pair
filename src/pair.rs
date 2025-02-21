@@ -1,30 +1,9 @@
-use std::{convert::Infallible, fmt::Debug, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull};
+use std::{
+    convert::Infallible, fmt::Debug, marker::PhantomData, mem::ManuallyDrop,
+    panic::AssertUnwindSafe, ptr::NonNull,
+};
 
 use crate::{HasDependent, Owner};
-
-// SAFETY: `Pair` has no special thread-related invariants or requirements, so
-// sending a `Pair` to another thread could only cause problems if sending
-// either the owner or the dependent to another thread could cause problems
-// (since both are semantically moved with and made accessible through the
-// `Pair`).
-unsafe impl<O: Owner + ?Sized> Send for Pair<O>
-where
-    O: Send,
-    for<'any> <O as HasDependent<'any>>::Dependent: Send,
-{
-}
-
-// SAFETY: `Pair` has no special thread-related invariants or requirements, so
-// sharing a reference to a `Pair` across multiple threads could only cause
-// problems if sharing a reference to either the owner or the dependent across
-// multiple threads could cause problems (since references to both are made
-// accessible through references to the `Pair`).
-unsafe impl<O: Owner> Sync for Pair<O>
-where
-    O: Sync,
-    for<'any> <O as HasDependent<'any>>::Dependent: Sync,
-{
-}
 
 /// A self-referential pair containing both some [`Owner`] and its
 /// [`Dependent`](HasDependent::Dependent).
@@ -115,13 +94,43 @@ impl<O: Owner + ?Sized> Pair<O> {
         // lasts from now until drop, where we will drop `dependent` and then
         // drop owner.
 
-        // SAFETY: `owner` was just converted from a valid Box, and inherits the
-        // alignment and validity guarantees of Box. Additionally, the value
-        // behind the pointer is currently not borrowed at all - this marks the
-        // beginning of a shared borrow which will last until the returned
-        // `Pair` is dropped (or immediately, if `make_dependent` returns an
-        // error).
-        let maybe_dependent = unsafe { owner.as_ref() }.make_dependent(context);
+        // We're about to call `make_dependent(..)` - if it panics, we want to
+        // be able to drop the boxed owner before unwinding the rest of the
+        // stack to avoid unnecessarily leaking memory (and potentially other
+        // resources).
+        let maybe_dependent = match std::panic::catch_unwind(AssertUnwindSafe(|| {
+            // SAFETY: `owner` was just converted from a valid Box, and inherits
+            // the alignment and validity guarantees of Box. Additionally, the
+            // value behind the pointer is currently not borrowed at all - this
+            // marks the beginning of a shared borrow which will last until the
+            // returned `Pair` is dropped (or immediately, if `make_dependent`
+            // panics or returns an error).
+            unsafe { owner.as_ref() }.make_dependent(context)
+        })) {
+            Ok(maybe_dependent) => maybe_dependent,
+            Err(payload) => {
+                // make_dependent panicked - drop the owner, then resume_unwind
+
+                // SAFETY: `owner` was just created from a Box earlier in this
+                // function, and not invalidated since then. Because we haven't
+                // given away access to a `Self`, and the one borrow we took of
+                // the dependent to pass to `make_dependent` has expired, we
+                // know there are no outstanding borrows to owner. Therefore,
+                // reconstructing the original Box<O> is okay.
+                let owner: Box<O> = unsafe { Box::from_raw(owner.as_ptr()) };
+
+                // If the owner's drop *also* panics, we're in a super weird
+                // state. I think it makes more sense to resume_unwind with the
+                // payload of the first panic (from `make_dependent`), so if the
+                // owner's drop panics we just ignore it and continue on to
+                // resume_unwind with `make_dependent`'s payload.
+                let _ = std::panic::catch_unwind(AssertUnwindSafe(|| drop(owner)));
+
+                // It's very important that we diverge here - carrying on to the
+                // rest of this constructor would be unsound.
+                std::panic::resume_unwind(payload);
+            }
+        };
 
         // If `make_dependent(..)` failed, early return out from this function.
         let dependent = match maybe_dependent {
@@ -177,14 +186,10 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// lifetime, the closure may simply return the reference to the dependent,
     /// which may then be used as if this function directly returned a
     /// reference.
-    pub fn with_dependent<
-        'self_borrow,
+    pub fn with_dependent<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
+    where
         F: for<'any> FnOnce(&'self_borrow <O as HasDependent<'any>>::Dependent) -> T,
-        T,
-    >(
-        &'self_borrow self,
-        f: F,
-    ) -> T {
+    {
         // SAFETY: `self.dependent` was originally converted from a valid
         // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
         // NonNull<()>. As such, it inherited the alignment and validity
@@ -213,14 +218,10 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// because mutable references are invariant over their type `T`, and the
     /// exact T here (a `Dependent` with a very specific lifetime lasting from
     /// the construction of `self` until drop) is impossible to express.
-    pub fn with_dependent_mut<
-        'self_borrow,
+    pub fn with_dependent_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
+    where
         F: for<'any> FnOnce(&'self_borrow mut <O as HasDependent<'any>>::Dependent) -> T,
-        T,
-    >(
-        &'self_borrow mut self,
-        f: F,
-    ) -> T {
+    {
         // SAFETY: `self.dependent` was originally converted from a valid
         // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
         // NonNull<()>. As such, it inherited the alignment and validity
@@ -260,13 +261,39 @@ impl<O: Owner + ?Sized> Pair<O> {
         // there are no outstanding borrows to the dependent. Therefore,
         // reconstructing the original Box<<O as HasDependent<'_>>::Dependent>
         // is okay.
-        drop(unsafe {
+        let dependent: Box<<O as HasDependent<'_>>::Dependent> = unsafe {
             Box::from_raw(
                 this.dependent
                     .cast::<<O as HasDependent<'_>>::Dependent>()
                     .as_ptr(),
             )
-        });
+        };
+
+        // We're about to drop the dependent - if it panics, we want to be able
+        // to drop the boxed owner before unwinding the rest of the stack to
+        // avoid unnecessarily leaking memory (and potentially other resources).
+        if let Err(payload) = std::panic::catch_unwind(AssertUnwindSafe(|| drop(dependent))) {
+            // Dependent's drop panicked - drop the owner, then resume_unwind
+
+            // SAFETY: `this.owner` was originally created from a Box, and never
+            // invalidated since then. Because we took ownership of `self`, and
+            // we just dropped the dependent (well, the drop panicked - but its
+            // borrow of the owner has certainly expired), we know there are no
+            // outstanding borrows to owner. Therefore, reconstructing the
+            // original Box<O> is okay.
+            let owner: Box<O> = unsafe { Box::from_raw(this.owner.as_ptr()) };
+
+            // If the owner's drop *also* panics, we're in a super weird state.
+            // I think it makes more sense to resume_unwind with the payload of
+            // the first panic (from dependent's drop), so if the owner's drop
+            // panics we just ignore it and continue on to resume_unwind with
+            // the dependent's payload.
+            let _ = std::panic::catch_unwind(AssertUnwindSafe(|| drop(owner)));
+
+            // It's very important that we diverge here - carrying on to the
+            // rest of this function would be unsound.
+            std::panic::resume_unwind(payload);
+        }
 
         // SAFETY: `this.owner` was originally created from a Box, and never
         // invalidated since then. Because we took ownership of `self`, and we
@@ -411,13 +438,39 @@ impl<O: Owner + ?Sized> Drop for Pair<O> {
         // invalidated since then. Because we are in drop, we know there are no
         // outstanding borrows to the dependent. Therefore, reconstructing the
         // original Box<<O as HasDependent<'_>>::Dependent> is okay.
-        drop(unsafe {
+        let dependent = unsafe {
             Box::from_raw(
                 self.dependent
                     .cast::<<O as HasDependent<'_>>::Dependent>()
                     .as_ptr(),
             )
-        });
+        };
+
+        // We're about to drop the dependent - if it panics, we want to be able
+        // to drop the boxed owner before unwinding the rest of the stack to
+        // avoid unnecessarily leaking memory (and potentially other resources).
+        if let Err(payload) = std::panic::catch_unwind(AssertUnwindSafe(|| drop(dependent))) {
+            // Dependent's drop panicked - drop the owner, then resume_unwind
+
+            // SAFETY: `this.owner` was originally created from a Box, and never
+            // invalidated since then. Because we are in drop, and we just
+            // dropped the dependent (well, the drop panicked - but its borrow
+            // of the owner has certainly expired), we know there are no
+            // outstanding borrows to owner. Therefore, reconstructing the
+            // original Box<O> is okay.
+            let owner: Box<O> = unsafe { Box::from_raw(self.owner.as_ptr()) };
+
+            // If the owner's drop *also* panics, we're in a super weird state.
+            // I think it makes more sense to resume_unwind with the payload of
+            // the first panic (from dependent's drop), so if the owner's drop
+            // panics we just ignore it and continue on to resume_unwind with
+            // the dependent's payload.
+            let _ = std::panic::catch_unwind(AssertUnwindSafe(|| drop(owner)));
+
+            // It's very important that we diverge here - carrying on to the
+            // rest of drop would be unsound.
+            std::panic::resume_unwind(payload);
+        }
 
         // Drop the owner `Box<O>`
 
@@ -425,8 +478,34 @@ impl<O: Owner + ?Sized> Drop for Pair<O> {
         // invalidated since then. Because we are in drop, and we just dropped
         // the dependent, we know there are no outstanding borrows to owner.
         // Therefore, reconstructing the original Box<O> is okay.
-        drop(unsafe { Box::from_raw(self.owner.as_ptr()) });
+        let owner = unsafe { Box::from_raw(self.owner.as_ptr()) };
+
+        drop(owner);
     }
+}
+
+// SAFETY: `Pair` has no special thread-related invariants or requirements, so
+// sending a `Pair` to another thread could only cause problems if sending
+// either the owner or the dependent to another thread could cause problems
+// (since both are semantically moved with and made accessible through the
+// `Pair`).
+unsafe impl<O: Owner + ?Sized> Send for Pair<O>
+where
+    O: Send,
+    for<'any> <O as HasDependent<'any>>::Dependent: Send,
+{
+}
+
+// SAFETY: `Pair` has no special thread-related invariants or requirements, so
+// sharing a reference to a `Pair` across multiple threads could only cause
+// problems if sharing a reference to either the owner or the dependent across
+// multiple threads could cause problems (since references to both are made
+// accessible through references to the `Pair`).
+unsafe impl<O: Owner> Sync for Pair<O>
+where
+    O: Sync,
+    for<'any> <O as HasDependent<'any>>::Dependent: Sync,
+{
 }
 
 impl<O: Owner + Debug + ?Sized> Debug for Pair<O>
