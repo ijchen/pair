@@ -8,7 +8,9 @@ readme = "README.md"
 repository = "https://github.com/ijchen/pair"
 documentation = "https://docs.rs/pair"
 edition = "2024"
-include = ["/src/", "/Cargo.toml", "/README.md", "/LICENSE-*"]
+include = ["/src/", "/Cargo.toml", "/README.md", "CHANGELOG.md", "/LICENSE-*"]
 publish = false
 
 [dependencies]
+
+# TODO: define lints
