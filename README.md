@@ -1,7 +1,7 @@
 Safe API for generic self-referential pairs of owner and dependent.
 
 You define how to construct a dependent type from a reference to an owning type,
-and [`Pair`] will carefully bundle them together in a safe and freely movable
+and `pair` will carefully bundle them together in a safe and freely movable
 self-referential struct.
 
 # DO NOT USE THIS LIBRARY
@@ -14,6 +14,8 @@ in time.
 
 A typical use case might look something like this:
 ```rust
+use pair::{HasDependent, Owner, Pair};
+
 // Let's say you have some buffer type that contains a string
 #[derive(Debug)]
 pub struct MyBuffer {
@@ -28,14 +30,14 @@ pub struct Parsed<'a> {
 
 // And you have some expensive parsing function you only want to run once
 fn parse(buffer: &MyBuffer) -> Parsed<'_> {
-    Parsed {
-        tokens: buffer.data.split_whitespace().collect(),
-    }
+    let tokens = buffer.data.split_whitespace().collect();
+    Parsed { tokens }
 }
-```
 
-You would then implement [`HasDependent`] and [`Owner`] for `MyBuffer`:
-```rust
+
+
+// You would then implement HasDependent and Owner for MyBuffer:
+
 // Defines the owner/dependent relationship between MyBuffer and Parsed<'_>
 impl<'owner> HasDependent<'owner> for MyBuffer {
     type Dependent = Parsed<'owner>;
@@ -44,7 +46,7 @@ impl<'owner> HasDependent<'owner> for MyBuffer {
 // Define how to make a Parsed<'_> from a &MyBuffer
 impl Owner for MyBuffer {
     type Context = (); // We don't need any extra args to `make_dependent`
-    type Err = Infallible; // Our example parsing can't fail
+    type Err = std::convert::Infallible; // Our example parsing can't fail
 
     fn make_dependent(
         &self,
@@ -53,40 +55,42 @@ impl Owner for MyBuffer {
         Ok(parse(self))
     }
 }
-```
 
-You can now use `MyBuffer` in a [`Pair`]:
-```rust
-// A Pair can be constructed from an owner value (MyBuffer, in this example)
-let mut pair = Pair::new(MyBuffer {
-    data: String::from("this is an example"),
-});
 
-// You can obtain a reference to the owner via a reference to the pair
-let owner: &MyBuffer = pair.get_owner();
-assert_eq!(owner.data, "this is an example");
 
-// You can access a reference to the dependent via a reference to the pair, but
-// only within a provided closure.
-// See the documentation of `Pair::with_dependent` for details.
-let kebab = pair.with_dependent(|parsed: &Parsed<'_>| parsed.tokens.join("-"));
-assert_eq!(kebab, "this-is-an-example");
+// You can now use MyBuffer in a Pair:
+fn main() {
+    // A Pair can be constructed from an owner value (MyBuffer, in this example)
+    let mut pair = Pair::new(MyBuffer {
+        data: String::from("this is an example"),
+    });
 
-// However, if the dependent is covariant over its lifetime (as our example
-// Parsed<'_> is) you can trivially extract the dependent from the closure.
-// This will not compile if the dependent is not covariant.
-let parsed: &Parsed<'_> = pair.with_dependent(|parsed| parsed);
-assert_eq!(parsed.tokens, ["this", "is", "an", "example"]);
+    // You can obtain a reference to the owner via a reference to the pair
+    let owner: &MyBuffer = pair.get_owner();
+    assert_eq!(owner.data, "this is an example");
 
-// You can obtain a mutable reference to the dependent via a mutable
-// reference to the pair, but only within a provided closure.
-// See the documentation of `Pair::with_dependent_mut` for details.
-pair.with_dependent_mut(|parsed| parsed.tokens.pop());
-assert_eq!(pair.with_dependent(|parsed| parsed.tokens.len()), 3);
+    // You can access a reference to the dependent via a reference to the pair,
+    // but only within a provided closure.
+    // See the documentation of `Pair::with_dependent` for details.
+    let kebab = pair.with_dependent(|parsed: &Parsed<'_>| parsed.tokens.join("-"));
+    assert_eq!(kebab, "this-is-an-example");
 
-// If you're done with the dependent, you can recover the owner.
-// This will drop the dependent.
-let my_buffer: MyBuffer = pair.into_owner();
+    // However, if the dependent is covariant over its lifetime (as our example
+    // Parsed<'_> is) you can trivially extract the dependent from the closure.
+    // This will not compile if the dependent is not covariant.
+    let parsed: &Parsed<'_> = pair.with_dependent(|parsed| parsed);
+    assert_eq!(parsed.tokens, ["this", "is", "an", "example"]);
+
+    // You can obtain a mutable reference to the dependent via a mutable
+    // reference to the pair, but only within a provided closure.
+    // See the documentation of `Pair::with_dependent_mut` for details.
+    pair.with_dependent_mut(|parsed| parsed.tokens.pop());
+    assert_eq!(pair.with_dependent(|parsed| parsed.tokens.len()), 3);
+
+    // If you're done with the dependent, you can recover the owner.
+    // This will drop the dependent.
+    let my_buffer: MyBuffer = pair.into_owner();
+}
 ```
 
 # How it Works
@@ -139,7 +143,5 @@ dual licensed as above, without any additional terms or conditions.
 docs.rs documentation links for rendered markdown (ex, on GitHub)
 These are overridden when include_str!(..)'d in lib.rs
 -->
-<!-- ON_RELEASE: the below links should be updated, and this comment removed -->
+<!-- ON_RELEASE: the below link(s) should be updated, and this comment removed -->
 [`Pair`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/struct.Pair.html
-[`Owner`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/trait.Owner.html
-[`HasDependent`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/trait.HasDependent.html
