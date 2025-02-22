@@ -32,7 +32,7 @@ pub trait HasDependent<'owner, ForImpliedBound: Sealed = Bounds<&'owner Self>> {
 }
 
 /// A type which can act as the "owner" of some data, and can produce some
-/// dependent type which borrows from `Self`. Used for the [`Pair`](crate::pair)
+/// dependent type which borrows from `Self`. Used for the [`Pair`](crate::Pair)
 /// struct.
 ///
 /// The supertrait [`HasDependent<'_>`] defines the dependent type, acting as a

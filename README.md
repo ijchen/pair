@@ -1,7 +1,7 @@
 Safe API for generic self-referential pairs of owner and dependent.
 
 You define how to construct a dependent type from a reference to an owning type,
-and `Pair` will carefully bundle them together in a safe and freely movable
+and [`Pair`] will carefully bundle them together in a safe and freely movable
 self-referential struct.
 
 # DO NOT USE THIS LIBRARY
@@ -34,7 +34,7 @@ fn parse(buffer: &MyBuffer) -> Parsed<'_> {
 }
 ```
 
-You would then implement `HasDependent` and `Owner` for `MyBuffer`:
+You would then implement [`HasDependent`] and [`Owner`] for `MyBuffer`:
 ```rust
 // Defines the owner/dependent relationship between MyBuffer and Parsed<'_>
 impl<'owner> HasDependent<'owner> for MyBuffer {
@@ -55,7 +55,7 @@ impl Owner for MyBuffer {
 }
 ```
 
-You can now use `MyBuffer` in a `Pair`:
+You can now use `MyBuffer` in a [`Pair`]:
 ```rust
 // A Pair can be constructed from an owner value (MyBuffer, in this example)
 let mut pair = Pair::new(MyBuffer {
@@ -91,14 +91,14 @@ let my_buffer: MyBuffer = pair.into_owner();
 
 # How it Works
 
-Under the hood, `Pair` moves the owner onto the heap, giving it a stable memory
-address. It is then borrowed and used to construct the dependent, which is also
-moved onto the heap. The dependent is type-erased, so that its inexpressible
-self-referential lifetime goes away. All exposed APIs are careful to ensure type
-and aliasing rules are upheld, regardless of anything safe user code could do.
-When the owner needs to be dropped or recovered, the dependent will first be
-recovered and dropped, ending the borrow of the owner. At that point, the owner
-can safely be recovered and the `Pair` deconstructed.
+Under the hood, [`Pair`] moves the owner onto the heap, giving it a stable
+memory address. It is then borrowed and used to construct the dependent, which
+is also moved onto the heap. The dependent is type-erased, so that its
+inexpressible self-referential lifetime goes away. All exposed APIs are careful
+to ensure type and aliasing rules are upheld, regardless of anything safe user
+code could do. When the owner needs to be dropped or recovered, the dependent
+will first be recovered and dropped, ending the borrow of the owner. At that
+point, the owner can safely be recovered and the `Pair` deconstructed.
 
 # Related Projects
 
@@ -123,8 +123,9 @@ can safely be recovered and the `Pair` deconstructed.
 Licensed under either of:
 
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+  <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  <http://opensource.org/licenses/MIT>)
 
 at your option.
 
@@ -133,3 +134,15 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+<!--
+docs.rs documentation links for rendered markdown (ex, on GitHub)
+These are overridden when include_str!(..)'d in lib.rs
+-->
+<!--
+TODO: for a release, the below links should be updated, and this second "to-do"
+comment removed (the above one should stay).
+-->
+[`Pair`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/struct.Pair.html
+[`Owner`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/trait.Owner.html
+[`HasDependent`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/trait.HasDependent.html
