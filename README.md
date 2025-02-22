@@ -139,10 +139,7 @@ dual licensed as above, without any additional terms or conditions.
 docs.rs documentation links for rendered markdown (ex, on GitHub)
 These are overridden when include_str!(..)'d in lib.rs
 -->
-<!--
-TODO: for a release, the below links should be updated, and this second "to-do"
-comment removed (the above one should stay).
--->
+<!-- ON_RELEASE: the below links should be updated, and this comment removed -->
 [`Pair`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/struct.Pair.html
 [`Owner`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/trait.Owner.html
 [`HasDependent`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/trait.HasDependent.html

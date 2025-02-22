@@ -1,5 +1,6 @@
 [package]
 name = "pair"
+# ON_RELEASE: Bump version. Don't forget to do all other "ON_RELEASE" tasks!
 version = "0.1.0"
 authors = ["Isaac Chen"]
 description = "Safe API for generic self-referential pairs of owner and dependent."
@@ -9,8 +10,10 @@ repository = "https://github.com/ijchen/pair"
 documentation = "https://docs.rs/pair"
 edition = "2024"
 include = ["/src/", "/Cargo.toml", "/README.md", "CHANGELOG.md", "/LICENSE-*"]
+# ON_RELEASE: Remove publish = false
 publish = false
 
 [dependencies]
+# No dependencies
 
 # TODO: define lints
