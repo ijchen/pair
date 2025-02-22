@@ -10,46 +10,83 @@ As of right now, I have absolutely no idea whether or not this API is sound. You
 should *absolutely not* use this library for anything that matters at this point
 in time.
 
-# API Overview
+# Example Usage
 
-The core API looks *roughly* like this (some details omitted for brevity):
+A typical use case might look something like this:
 ```rust
-// You specify the dependent (borrowing) type - ex, &'owner str or Foo<'owner>
-pub trait HasDependent<'owner> {
-    type Dependent;
+// Let's say you have some buffer type that contains a string
+#[derive(Debug)]
+pub struct MyBuffer {
+    data: String,
 }
 
-// You specify how to make the dependent from a reference to the owner type
-pub trait Owner: for<'any> HasDependent<'any> {
-    fn make_dependent(&self) -> <Self as HasDependent<'_>>::Dependent;
+// And you have some borrowing "parsed" representation, containing string slices
+#[derive(Debug)]
+pub struct Parsed<'a> {
+    tokens: Vec<&'a str>,
 }
 
-pub struct Pair<O: Owner> { ... }
-
-impl<O: Owner> Pair<O> {
-    // A Pair can be constructed from an owner
-    pub fn new(owner: O) -> Self { ... }
-
-    // The owner can be borrowed
-    pub fn get_owner(&self) -> &O { ... }
-
-    // The dependent can be borrowed, although normally only through a closure
-    // (See the documentation of `with_dependent` for details)
-    pub fn with_dependent<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
-    where
-        F: for<'any> FnOnce(&'self_borrow <O as HasDependent<'any>>::Dependent) -> T
-    { ... }
-
-    // The dependent can be borrowed mutably, although only through a closure
-    // (See the documentation of `with_dependent_mut` for details)
-    pub fn with_dependent_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
-    where
-        F: for<'any> FnOnce(&'self_borrow mut <O as HasDependent<'any>>::Dependent) -> T
-    { ... }
-
-    // The owner can be recovered by consuming the Pair (dropping the dependent)
-    pub fn into_owner(self) -> O { ... }
+// And you have some expensive parsing function you only want to run once
+fn parse(buffer: &MyBuffer) -> Parsed<'_> {
+    Parsed {
+        tokens: buffer.data.split_whitespace().collect(),
+    }
 }
+```
+
+You would then implement `HasDependent` and `Owner` for `MyBuffer`:
+```rust
+// Defines the owner/dependent relationship between MyBuffer and Parsed<'_>
+impl<'owner> HasDependent<'owner> for MyBuffer {
+    type Dependent = Parsed<'owner>;
+}
+
+// Define how to make a Parsed<'_> from a &MyBuffer
+impl Owner for MyBuffer {
+    type Context = (); // We don't need any extra args to `make_dependent`
+    type Err = Infallible; // Our example parsing can't fail
+
+    fn make_dependent(
+        &self,
+        (): Self::Context,
+    ) -> Result<<Self as pair::HasDependent<'_>>::Dependent, Self::Err> {
+        Ok(parse(self))
+    }
+}
+```
+
+You can now use `MyBuffer` in a `Pair`:
+```rust
+// A Pair can be constructed from an owner value (MyBuffer, in this example)
+let mut pair = Pair::new(MyBuffer {
+    data: String::from("this is an example"),
+});
+
+// You can obtain a reference to the owner via a reference to the pair
+let owner: &MyBuffer = pair.get_owner();
+assert_eq!(owner.data, "this is an example");
+
+// You can access a reference to the dependent via a reference to the pair, but
+// only within a provided closure.
+// See the documentation of `Pair::with_dependent` for details.
+let kebab = pair.with_dependent(|parsed: &Parsed<'_>| parsed.tokens.join("-"));
+assert_eq!(kebab, "this-is-an-example");
+
+// However, if the dependent is covariant over its lifetime (as our example
+// Parsed<'_> is) you can trivially extract the dependent from the closure.
+// This will not compile if the dependent is not covariant.
+let parsed: &Parsed<'_> = pair.with_dependent(|parsed| parsed);
+assert_eq!(parsed.tokens, ["this", "is", "an", "example"]);
+
+// You can obtain a mutable reference to the dependent via a mutable
+// reference to the pair, but only within a provided closure.
+// See the documentation of `Pair::with_dependent_mut` for details.
+pair.with_dependent_mut(|parsed| parsed.tokens.pop());
+assert_eq!(pair.with_dependent(|parsed| parsed.tokens.len()), 3);
+
+// If you're done with the dependent, you can recover the owner.
+// This will drop the dependent.
+let my_buffer: MyBuffer = pair.into_owner();
 ```
 
 # How it Works
