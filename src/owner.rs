@@ -47,7 +47,7 @@ pub trait Owner: for<'any> HasDependent<'any> {
     //
     // TODO(ichen): default this to () when associated type defaults are
     // stabilized (https://github.com/rust-lang/rust/issues/29661)
-    type Context;
+    type Context<'a>;
 
     /// The error type returned by [`make_dependent`](Owner::make_dependent) in
     /// the event of an error.
@@ -62,8 +62,8 @@ pub trait Owner: for<'any> HasDependent<'any> {
 
     /// Attempts to construct a [`Dependent`](HasDependent::Dependent) from a
     /// reference to an owner and some context.
-    fn make_dependent(
-        &self,
-        context: Self::Context,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err>;
+    fn make_dependent<'owner>(
+        &'owner self,
+        context: Self::Context<'_>,
+    ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Err>;
 }

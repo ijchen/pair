@@ -62,7 +62,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     ///
     /// If this construction can't fail, consider the convenience constructor
     /// [`Pair::new_with_context`], which returns `Self` directly.
-    pub fn try_new_with_context(owner: O, context: O::Context) -> Result<Self, (O, O::Err)>
+    pub fn try_new_with_context(owner: O, context: O::Context<'_>) -> Result<Self, (O, O::Err)>
     where
         O: Sized,
     {
@@ -84,7 +84,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// [`Pair::new_from_box_with_context`], which returns `Self` directly.
     pub fn try_new_from_box_with_context(
         owner: Box<O>,
-        context: O::Context,
+        context: O::Context<'_>,
     ) -> Result<Self, (Box<O>, O::Err)> {
         // Convert owner into a NonNull, so we are no longer restricted by the
         // aliasing requirements of Box
@@ -314,7 +314,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     }
 }
 
-impl<O: Owner<Context = (), Err = Infallible> + ?Sized> Pair<O> {
+impl<O: for<'any> Owner<Context<'any> = (), Err = Infallible> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
@@ -352,7 +352,7 @@ impl<O: Owner<Context = (), Err = Infallible> + ?Sized> Pair<O> {
     }
 }
 
-impl<O: Owner<Context = ()> + ?Sized> Pair<O> {
+impl<O: for<'any> Owner<Context<'any> = ()> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
@@ -402,7 +402,7 @@ impl<O: Owner<Err = Infallible> + ?Sized> Pair<O> {
     ///
     /// If this construction can fail, consider [`Pair::try_new_with_context`],
     /// which returns a [`Result`].
-    pub fn new_with_context(owner: O, context: O::Context) -> Self
+    pub fn new_with_context(owner: O, context: O::Context<'_>) -> Self
     where
         O: Sized,
     {
@@ -422,7 +422,7 @@ impl<O: Owner<Err = Infallible> + ?Sized> Pair<O> {
     ///
     /// If this construction can fail, consider
     /// [`Pair::try_new_from_box_with_context`], which returns a [`Result`].
-    pub fn new_from_box_with_context(owner: Box<O>, context: O::Context) -> Self {
+    pub fn new_from_box_with_context(owner: Box<O>, context: O::Context<'_>) -> Self {
         let Ok(pair) = Self::try_new_from_box_with_context(owner, context);
         pair
     }
@@ -522,7 +522,7 @@ where
     }
 }
 
-impl<O: Owner<Context = (), Err = Infallible> + Default> Default for Pair<O> {
+impl<O: for<'any> Owner<Context<'any> = (), Err = Infallible> + Default> Default for Pair<O> {
     fn default() -> Self {
         Self::new(O::default())
     }

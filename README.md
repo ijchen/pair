@@ -45,12 +45,12 @@ impl<'owner> HasDependent<'owner> for MyBuffer {
 
 // Define how to make a Parsed<'_> from a &MyBuffer
 impl Owner for MyBuffer {
-    type Context = (); // We don't need any extra args to `make_dependent`
+    type Context<'a> = (); // We don't need any extra args to `make_dependent`
     type Err = std::convert::Infallible; // Our example parsing can't fail
 
     fn make_dependent(
         &self,
-        (): Self::Context,
+        (): Self::Context<'_>,
     ) -> Result<<Self as pair::HasDependent<'_>>::Dependent, Self::Err> {
         Ok(parse(self))
     }

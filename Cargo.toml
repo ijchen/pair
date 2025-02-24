@@ -16,4 +16,7 @@ publish = false
 [dependencies]
 # No dependencies
 
+[dev-dependencies]
+trybuild = "1.0.103"
+
 # TODO: define lints
