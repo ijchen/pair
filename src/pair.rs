@@ -251,9 +251,8 @@ impl<O: Owner + ?Sized> Pair<O> {
         // dependent again, which would be... not good (unsound).
         //
         // It's important that we do this before calling the dependent's drop,
-        // since a panic in that drop would otherwise cause at least a double
-        // panic, and potentially even unsoundness (although that part I'm less
-        // sure of)
+        // since a panic in that drop would otherwise cause a double free when
+        // we attempt to drop the dependent again when dropping `self`.
         let this = ManuallyDrop::new(self);
 
         // SAFETY: `this.dependent` was originally created from a Box, and never
