@@ -54,9 +54,9 @@ fn basic_usage() {
 }
 
 #[test]
-fn get_owner_stress_test() {
-    // Let's just do a bunch of `get_owner(..)`s interlaced with a bunch of
-    // other random stuff and see what MIRI thinks
+fn basic_api_stress_test() {
+    // Let's just do a bunch of the basic API functions interlaced together and
+    // see what MIRI thinks
     let mut pair = Pair::new(Buff(String::from("This is a test of pair.")));
     let owner1 = pair.get_owner();
     let owner2 = pair.get_owner();
@@ -65,16 +65,23 @@ fn get_owner_stress_test() {
     let owner4 = pair.get_owner();
     let dep2 = pair.with_dependent(|dep| dep);
     println!("{owner1:?}{owner2:?}{owner3:?}{owner4:?}{dep1:?}{dep2:?}");
-    pair.with_dependent_mut(|dep| dep.push("hi"));
+    pair.with_dependent_mut(|dep| dep.push("hey"));
+    let owner1 = pair.get_owner();
+    let dep1 = pair.with_dependent(|dep| dep);
+    let owner2 = pair.get_owner();
+    let dep2 = pair.with_dependent(|dep| dep);
+    println!("{owner1:?}{owner2:?}{dep1:?}{dep2:?}");
+    pair.with_dependent_mut(|dep| dep.push("what's up"));
+    pair.with_dependent_mut(|dep| dep.push("hello"));
     let owner1 = pair.get_owner();
     let owner2 = pair.get_owner();
     println!("{owner1:?}{owner2:?}");
-    let pair2 = pair;
-    let owner1 = pair2.get_owner();
-    let owner2 = pair2.get_owner();
-    let owner3 = pair2.get_owner();
-    let dep1 = pair2.with_dependent(|dep| dep);
-    let owner4 = pair2.get_owner();
-    let dep2 = pair2.with_dependent(|dep| dep);
+    let new_pair = (|x| x)(std::convert::identity(pair));
+    let owner1 = new_pair.get_owner();
+    let owner2 = new_pair.get_owner();
+    let owner3 = new_pair.get_owner();
+    let dep1 = new_pair.with_dependent(|dep| dep);
+    let owner4 = new_pair.get_owner();
+    let dep2 = new_pair.with_dependent(|dep| dep);
     println!("{owner1:?}{owner2:?}{owner3:?}{owner4:?}{dep1:?}{dep2:?}");
 }

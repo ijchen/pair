@@ -429,6 +429,24 @@ impl<O: Owner<Err = Infallible> + ?Sized> Pair<O> {
 
 /// The [`Drop`] implementation for [`Pair`] will drop both the dependent and
 /// the owner, in that order.
+//
+// NOTE(ichen): There are definitely some weird dropck things going on, but I do
+// not believe they can lead to any unsoundness. Because of the signature of
+// Pair, dropck think we access an O and do nothing with O::Dependent. It's
+// right about O - we don't access it directly, but the dependent (which we do
+// drop) might access an O in its drop. Unfortunately, the compiler is wrong
+// about O::Dependent. It doesn't see any indication of O::Dependent in the
+// signature for Pair (because we've type erased it), so dropck has no idea that
+// we will drop an O::Dependent in our drop.
+//
+// This sounds like a problem, but I believe it is not. The signature of Owner
+// and HasDependent enforce that the dependent only borrows the owner, or things
+// which the owner also borrows. Additionally, the compiler will ensure that
+// anything the owner borrows are valid until the pair's drop. Therefore, the
+// dependent cannot contain any references which will be invalidated before the
+// drop of the Pair<O>. As far as I know, this is the only concern surrounding
+// dropck not understanding the semantics of Pair, and cannot cause unsoundness
+// for the reasons described above.
 impl<O: Owner + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
         // Drop the dependent `Box<<O as HasDependent<'_>>::Dependent>`
