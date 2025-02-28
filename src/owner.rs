@@ -1,18 +1,3 @@
-/// Used to prevent implementors of [`HasDependent`] from overriding the
-/// `ForImpliedBounds` generic type from its default.
-mod sealed {
-    /// The `ForImpliedBounds` generic type for
-    /// [`HasDependent`](super::HasDependent) should not be overridden from its
-    /// default.
-    pub trait Sealed {}
-    /// The `ForImpliedBounds` generic type for
-    /// [`HasDependent`](super::HasDependent) should not be overridden from its
-    /// default.
-    pub struct Bounds<T>(std::marker::PhantomData<T>);
-    impl<T> Sealed for Bounds<T> {}
-}
-use sealed::{Bounds, Sealed};
-
 /// Defines the dependent type for the [`Owner`] trait.
 ///
 /// Semantically, you can think of this like a lifetime Generic Associated Type
@@ -67,3 +52,18 @@ pub trait Owner: for<'any> HasDependent<'any> {
         context: Self::Context<'_>,
     ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Err>;
 }
+
+/// Used to prevent implementors of [`HasDependent`] from overriding the
+/// `ForImpliedBounds` generic type from its default.
+mod sealed {
+    /// The `ForImpliedBounds` generic type for
+    /// [`HasDependent`](super::HasDependent) should not be overridden from its
+    /// default.
+    pub trait Sealed {}
+    /// The `ForImpliedBounds` generic type for
+    /// [`HasDependent`](super::HasDependent) should not be overridden from its
+    /// default.
+    pub struct Bounds<T>(std::marker::PhantomData<T>);
+    impl<T> Sealed for Bounds<T> {}
+}
+use sealed::{Bounds, Sealed};
