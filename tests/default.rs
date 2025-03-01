@@ -12,7 +12,10 @@ impl<T> Owner for DefaultOwner<T> {
     type Context<'a> = ();
     type Err = Infallible;
 
-    fn make_dependent<'owner>(&'owner self, (): Self::Context<'_>) -> Result<&'owner T, Self::Err> {
+    fn make_dependent(
+        &self,
+        (): Self::Context<'_>,
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
         Ok(&self.0)
     }
 }

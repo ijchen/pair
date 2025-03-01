@@ -79,10 +79,10 @@ macro_rules! debug_tests {
         impl Owner for $name {
             type Context<'a> = ();
             type Err = Infallible;
-            fn make_dependent<'owner>(
-                &'owner $self_kw,
+            fn make_dependent(
+                &$self_kw,
                 (): Self::Context<'_>,
-            ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Err> {
+            ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
                 Ok($dep_expr)
             }
         }

@@ -72,7 +72,10 @@ impl Owner for BothZstOwner {
     type Context<'a> = ();
     type Err = Infallible;
 
-    fn make_dependent(&self, _: Self::Context<'_>) -> Result<ZstDependent, Self::Err> {
+    fn make_dependent(
+        &self,
+        (): Self::Context<'_>,
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
         Ok(ZstDependent)
     }
 }
