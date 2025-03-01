@@ -1,7 +1,4 @@
 # Test to-do list
-- Weird nesting
-  - Test `Pair` that owns another `Pair`
-  - Test with circular references
 - Variance stuff
   - Test with covariant lifetime-parameterized dependent (like string slices)
   - Test with invariant lifetime-parameterized dependent (like `&mut T`)
