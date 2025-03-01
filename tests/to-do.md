@@ -1,5 +1,4 @@
 # Test to-do list
-- Test dependent borrowing from multiple parts of owner
 - Weird nesting
   - Test `Pair` that owns another `Pair`
   - Test with circular references
