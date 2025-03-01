@@ -1,5 +1,4 @@
 # Test to-do list
-- Test `Default` implementation creates expected values
 - Test dependent borrowing from multiple parts of owner
 - Weird nesting
   - Test `Pair` that owns another `Pair`
