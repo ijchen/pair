@@ -1,8 +1,4 @@
 # Test to-do list
-- ZSTs
-  - Test with zero-sized owner
-  - Test with zero-sized dependent
-  - Test with both zero-sized owner and dependent
 - Test `Default` implementation creates expected values
 - Test dependent borrowing from multiple parts of owner
 - Weird nesting
