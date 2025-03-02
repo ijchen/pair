@@ -1,8 +1,4 @@
 # Test to-do list
-- Interior mutability
-  - Test with interior-mutable owner
-  - Test with interior-mutable dependent
-  - Test with interior-mutable for both owner and dependent
 - Trybuild tests
   - Attempts to extract the dependent outside `with_dependent_mut`
   - Verify dependent cannot outlive the pair. This means writing code that
