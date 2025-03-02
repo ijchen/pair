@@ -1,6 +1,5 @@
 # Test to-do list
 - Trybuild tests
-  - Attempts to extract the dependent outside `with_dependent_mut`
   - Verify dependent cannot outlive the pair. This means writing code that
     attempts to extract and store a reference to the dependent that would
     outlive the Pair itself

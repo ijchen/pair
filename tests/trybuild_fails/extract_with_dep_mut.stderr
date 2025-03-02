@@ -1,0 +1,11 @@
+error[E0597]: `pair` does not live long enough
+  --> tests/trybuild_fails/extract_with_dep_mut.rs:26:29
+   |
+25 |     let mut pair = Pair::new(Buff(String::from("This is a test of pair.")));
+   |         -------- binding `pair` declared here
+26 |     let _: &mut Vec<&str> = pair.with_dependent_mut(|dep| dep);
+   |                             ^^^^                          --- returning this value requires that `pair` is borrowed for `'static`
+   |                             |
+   |                             borrowed value does not live long enough
+27 | }
+   | - `pair` dropped here while still borrowed
