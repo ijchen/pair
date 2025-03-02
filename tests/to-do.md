@@ -1,8 +1,5 @@
 # Test to-do list
 - Trybuild tests
-  - Verify dependent cannot outlive the pair. This means writing code that
-    attempts to extract and store a reference to the dependent that would
-    outlive the Pair itself
   - Test that the compiler prevents use of borrowed data after into_owner()
 - Concurrency
   - Sending ownership of a Pair between threads through channels
