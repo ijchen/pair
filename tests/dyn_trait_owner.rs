@@ -21,10 +21,10 @@ impl Owner for dyn MyTrait {
     type Context<'a> = ();
     type Err = Infallible;
 
-    fn make_dependent<'owner>(
-        &'owner self,
+    fn make_dependent(
+        &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
         Ok(self.get())
     }
 }
