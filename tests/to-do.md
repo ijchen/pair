@@ -1,9 +1,4 @@
 # Test to-do list
-- Variance stuff
-  - Test with covariant lifetime-parameterized dependent (like string slices)
-  - Test with invariant lifetime-parameterized dependent (like `&mut T`)
-  - Test with contravariant lifetime-parameterized dependent
-  - Verify that compiler prevents extracting dependent with invariant types
 - Interior mutability
   - Test with interior-mutable owner
   - Test with interior-mutable dependent
