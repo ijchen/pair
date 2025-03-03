@@ -431,7 +431,7 @@ impl<O: Owner<Err = Infallible> + ?Sized> Pair<O> {
 //
 // NOTE(ichen): There are definitely some weird dropck things going on, but I do
 // not believe they can lead to any unsoundness. Because of the signature of
-// Pair, dropck think we access an O and do nothing with O::Dependent. It's
+// Pair, dropck thinks we access an O and do nothing with O::Dependent. It's
 // right about O - we don't access it directly, but the dependent (which we do
 // drop) might access an O in its drop. Unfortunately, the compiler is wrong
 // about O::Dependent. It doesn't see any indication of O::Dependent in the
