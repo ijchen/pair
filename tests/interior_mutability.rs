@@ -13,12 +13,12 @@ impl<'owner> HasDependent<'owner> for InteriorMutableOwner {
 
 impl Owner for InteriorMutableOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(&self.value)
     }
 }
@@ -58,12 +58,12 @@ impl<'owner> HasDependent<'owner> for RegularOwner {
 
 impl Owner for RegularOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(InteriorMutableDependent {
             value_cell: Cell::new(self.value),
             original_ref: &self.value,
@@ -98,12 +98,12 @@ impl<'owner> HasDependent<'owner> for BothInteriorMutableOwner {
 
 impl Owner for BothInteriorMutableOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(BothInteriorMutableDependent {
             owner_ref: &self.value,
             local_value: Cell::new(*self.value.borrow()),

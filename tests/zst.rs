@@ -14,9 +14,12 @@ impl<'owner> HasDependent<'owner> for ZstOwner {
 
 impl Owner for ZstOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<NonZstDependent, Self::Err> {
+    fn make_dependent(
+        &self,
+        (): Self::Context<'_>,
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(NonZstDependent(42))
     }
 }
@@ -44,9 +47,12 @@ impl<'owner> HasDependent<'owner> for NonZstOwner {
 
 impl Owner for NonZstOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<ZstDependent, Self::Err> {
+    fn make_dependent(
+        &self,
+        (): Self::Context<'_>,
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(ZstDependent)
     }
 }
@@ -70,12 +76,12 @@ impl<'owner> HasDependent<'owner> for BothZstOwner {
 
 impl Owner for BothZstOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(ZstDependent)
     }
 }

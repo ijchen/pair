@@ -24,12 +24,12 @@ impl<'owner> HasDependent<'owner> for PanicOnMakeDependent {
 
 impl Owner for PanicOnMakeDependent {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         panic_any(MyPayload(7));
     }
 }
@@ -64,12 +64,12 @@ impl<'owner> HasDependent<'owner> for PanicOnMakeDependentAndOwnerDrop {
 
 impl Owner for PanicOnMakeDependentAndOwnerDrop {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         panic_any(MyPayload(42));
     }
 }
@@ -110,12 +110,12 @@ impl<'owner> HasDependent<'owner> for PanicOnDepDropIntoOwner {
 
 impl Owner for PanicOnDepDropIntoOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(PanicOnDepDropIntoOwnerDep)
     }
 }
@@ -155,12 +155,12 @@ impl<'owner> HasDependent<'owner> for PanicOnDepAndOwnerDropIntoOwner {
 
 impl Owner for PanicOnDepAndOwnerDropIntoOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(PanicOnDepAndOwnerDropIntoOwnerDep)
     }
 }
@@ -201,12 +201,12 @@ impl<'owner> HasDependent<'owner> for PanicOnDepDropPairDrop {
 
 impl Owner for PanicOnDepDropPairDrop {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(PanicOnDepDropPairDropDep)
     }
 }
@@ -246,12 +246,12 @@ impl<'owner> HasDependent<'owner> for PanicOnDepAndOwnerDropPairDrop {
 
 impl Owner for PanicOnDepAndOwnerDropPairDrop {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(PanicOnDepAndOwnerDropPairDropDep)
     }
 }

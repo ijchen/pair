@@ -11,12 +11,12 @@ impl<'owner> HasDependent<'owner> for BuffFallible {
 
 impl Owner for BuffFallible {
     type Context<'a> = ();
-    type Err = String;
+    type Error = String;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         let parts: Vec<_> = self.0.split_whitespace().collect();
 
         if parts.is_empty() {
@@ -57,12 +57,12 @@ impl<'owner> HasDependent<'owner> for BuffWithContext {
 
 impl Owner for BuffWithContext {
     type Context<'a> = &'a str;
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(self.0.split(context).collect())
     }
 }
@@ -88,12 +88,12 @@ impl<'owner> HasDependent<'owner> for BuffFallibleWithContext {
 
 impl Owner for BuffFallibleWithContext {
     type Context<'a> = &'a str;
-    type Err = String;
+    type Error = String;
 
     fn make_dependent(
         &self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         let parts: Vec<_> = self.0.split(context).collect();
 
         if parts.len() > 1 {

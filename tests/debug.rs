@@ -23,8 +23,9 @@ mod fake {
     }
 }
 
-fn debugs_match<O: for<'any> Owner<Context<'any> = (), Err = Infallible> + Clone + Debug>(owner: O)
-where
+fn debugs_match<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + Clone + Debug>(
+    owner: O,
+) where
     for<'any> <O as HasDependent<'any>>::Dependent: Debug,
 {
     let Ok(dependent) = owner.make_dependent(());
@@ -78,11 +79,11 @@ macro_rules! debug_tests {
         }
         impl Owner for $name {
             type Context<'a> = ();
-            type Err = Infallible;
+            type Error = Infallible;
             fn make_dependent(
                 &$self_kw,
                 (): Self::Context<'_>,
-            ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+            ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
                 Ok($dep_expr)
             }
         }

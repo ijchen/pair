@@ -28,12 +28,12 @@ impl<'owner, T> HasDependent<'owner> for OnDrop<T> {
 
 impl<T> Owner for OnDrop<T> {
     type Context<'a> = (Rc<RefCell<T>>, fn(&mut T));
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(OnDropDep {
             value: context.0,
             f: context.1,

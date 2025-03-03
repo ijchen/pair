@@ -17,12 +17,12 @@ impl<'owner> HasDependent<'owner> for Buff<[u8]> {
 
 impl Owner for Buff<[u8]> {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         let start = usize::min(1, self.0.len());
         let end = self.0.len().saturating_sub(1);
         Ok((&self.0[start..end], self.0.len()))

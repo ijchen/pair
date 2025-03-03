@@ -10,12 +10,12 @@ impl<'owner> HasDependent<'owner> for SimpleOwner {
 
 impl Owner for SimpleOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(&self.0)
     }
 }
@@ -39,12 +39,12 @@ impl<'owner> HasDependent<'owner> for PairOwner {
 
 impl Owner for PairOwner {
     type Context<'a> = ();
-    type Err = Infallible;
+    type Error = Infallible;
 
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Err> {
+    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(PairOwnerDependent {
             value_ref: &self.value,
             inner_pair_ref: &self.inner_pair,

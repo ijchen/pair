@@ -43,14 +43,14 @@ pub trait Owner: for<'any> HasDependent<'any> {
     // TODO(ichen): default this to std::convert::Infallible (or preferably !)
     // when associated type defaults are stabilized
     // (https://github.com/rust-lang/rust/issues/29661)
-    type Err;
+    type Error;
 
     /// Attempts to construct a [`Dependent`](HasDependent::Dependent) from a
     /// reference to an owner and some context.
     fn make_dependent<'owner>(
         &'owner self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Err>;
+    ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Error>;
 }
 
 /// Used to prevent implementors of [`HasDependent`] from overriding the
