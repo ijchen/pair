@@ -182,10 +182,9 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// lives at least as long as the borrow of `self`. This is important
     /// because the dependent may be invariant over its lifetime, and the
     /// correct lifetime (lasting from the construction of `self` until drop) is
-    /// impossible to express. For dependent types covariant over their
-    /// lifetime, the closure may simply return the reference to the dependent,
-    /// which may then be used as if this function directly returned a
-    /// reference.
+    /// inexpressible. For dependent types covariant over their lifetime, the
+    /// closure may simply return the reference to the dependent, which may then
+    /// be used as if this function directly returned a reference.
     pub fn with_dependent<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
         F: for<'any> FnOnce(&'self_borrow <O as HasDependent<'any>>::Dependent) -> T,
@@ -217,7 +216,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// lives at least as long as the borrow of `self`. This is important
     /// because mutable references are invariant over their type `T`, and the
     /// exact T here (a `Dependent` with a very specific lifetime lasting from
-    /// the construction of `self` until drop) is impossible to express.
+    /// the construction of `self` until drop) is inexpressible.
     pub fn with_dependent_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
         F: for<'any> FnOnce(&'self_borrow mut <O as HasDependent<'any>>::Dependent) -> T,
