@@ -1,0 +1,13 @@
+error[E0505]: cannot move out of `pair` because it is borrowed
+  --> tests/trybuild_fails/keep_dep_after_into_owner.rs:28:17
+   |
+25 |     let pair = Pair::new(Buff(String::from("This is a test of pair.")));
+   |         ---- binding `pair` declared here
+26 |     let dep: &Vec<&str> = pair.with_dependent(|dep| dep);
+   |                           ---- borrow of `pair` occurs here
+27 |
+28 |     let owner = pair.into_owner();
+   |                 ^^^^ move out of `pair` occurs here
+29 |
+30 |     let _ = dep;
+   |             --- borrow later used here

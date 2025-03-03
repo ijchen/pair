@@ -1,6 +1,4 @@
 # Test to-do list
-- Trybuild tests
-  - Test that the compiler prevents use of borrowed data after into_owner()
 - Concurrency
   - Sending ownership of a Pair between threads through channels
   - Sharing a Pair via &Pair<_> across multiple threads
