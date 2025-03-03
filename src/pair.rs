@@ -228,8 +228,8 @@ impl<O: Owner + ?Sized> Pair<O> {
         // neither our code nor any of our exposed APIs could have invalidated
         // those since construction. Additionally, because we have an exclusive
         // reference to self, we know that the value behind the pointer is
-        // currently not borrowed at all, and can't be until the mutable borrow
-        // of `self` expires.
+        // currently not borrowed at all, and can't be until our exclusive
+        // borrow of `self` expires.
         let dependent: &mut <O as HasDependent<'_>>::Dependent = unsafe {
             self.dependent
                 .cast::<<O as HasDependent<'_>>::Dependent>()
