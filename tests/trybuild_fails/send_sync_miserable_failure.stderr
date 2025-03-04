@@ -1,0 +1,37 @@
+error[E0277]: `*mut ()` cannot be sent between threads safely
+  --> tests/trybuild_fails/send_sync_miserable_failure.rs:27:18
+   |
+27 |     check_send::<Pair<NotSendOrSync>>();
+   |                  ^^^^^^^^^^^^^^^^^^^ `*mut ()` cannot be sent between threads safely
+   |
+   = help: within `NotSendOrSync`, the trait `Send` is not implemented for `*mut ()`
+note: required because it appears within the type `NotSendOrSync`
+  --> tests/trybuild_fails/send_sync_miserable_failure.rs:5:8
+   |
+5  | struct NotSendOrSync(*mut ());
+   |        ^^^^^^^^^^^^^
+   = note: required for `Pair<NotSendOrSync>` to implement `Send`
+note: required by a bound in `check_send`
+  --> tests/trybuild_fails/send_sync_miserable_failure.rs:23:18
+   |
+23 | fn check_send<T: Send>() {}
+   |                  ^^^^ required by this bound in `check_send`
+
+error[E0277]: `*mut ()` cannot be shared between threads safely
+  --> tests/trybuild_fails/send_sync_miserable_failure.rs:28:18
+   |
+28 |     check_sync::<Pair<NotSendOrSync>>();
+   |                  ^^^^^^^^^^^^^^^^^^^ `*mut ()` cannot be shared between threads safely
+   |
+   = help: within `NotSendOrSync`, the trait `Sync` is not implemented for `*mut ()`
+note: required because it appears within the type `NotSendOrSync`
+  --> tests/trybuild_fails/send_sync_miserable_failure.rs:5:8
+   |
+5  | struct NotSendOrSync(*mut ());
+   |        ^^^^^^^^^^^^^
+   = note: required for `Pair<NotSendOrSync>` to implement `Sync`
+note: required by a bound in `check_sync`
+  --> tests/trybuild_fails/send_sync_miserable_failure.rs:24:18
+   |
+24 | fn check_sync<T: Sync>() {}
+   |                  ^^^^ required by this bound in `check_sync`
