@@ -5,8 +5,8 @@ version = "0.1.0"
 authors = ["Isaac Chen"]
 description = "Safe API for generic self-referential pairs of owner and dependent."
 license = "MIT OR Apache-2.0"
-keywords = ["self-referential", "data-structures", "memory", "ownership", "lifetime"]
-categories = ["data-structures", "memory-management", "rust-patterns"] # TODO: "no-std"
+keywords = ["self-referential", "data-structures", "memory", "ownership", "no_std"]
+categories = ["memory-management", "rust-patterns", "no-std", "data-structures"]
 readme = "README.md"
 repository = "https://github.com/ijchen/pair"
 documentation = "https://docs.rs/pair"
@@ -21,5 +21,13 @@ publish = false
 [dev-dependencies]
 loom = "0.7.2"
 trybuild = "1.0.103"
+
+[features]
+default = ["std"]
+
+# The `std` feature (enabled by default) enables usage of the standard library
+# within pair. Without the standard library, pair cannot handle panics as
+# gracefully.
+std = []
 
 # TODO: define lints

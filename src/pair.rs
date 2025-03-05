@@ -1,9 +1,16 @@
-use std::{
-    convert::Infallible, fmt::Debug, marker::PhantomData, mem::ManuallyDrop,
-    panic::AssertUnwindSafe, ptr::NonNull,
-};
+//! Defines [`Pair`], the primary abstraction provided by this crate.
 
-use crate::{HasDependent, Owner};
+use core::{convert::Infallible, fmt::Debug, marker::PhantomData, mem::ManuallyDrop, ptr::NonNull};
+
+#[cfg(not(feature = "std"))]
+use alloc::boxed::Box;
+#[cfg(feature = "std")]
+use std::boxed::Box;
+
+use crate::{
+    HasDependent, Owner,
+    panicking::{catch_unwind, resume_unwind},
+};
 
 /// A self-referential pair containing both some [`Owner`] and its
 /// [`Dependent`](HasDependent::Dependent).
@@ -98,7 +105,7 @@ impl<O: Owner + ?Sized> Pair<O> {
         // be able to drop the boxed owner before unwinding the rest of the
         // stack to avoid unnecessarily leaking memory (and potentially other
         // resources).
-        let maybe_dependent = match std::panic::catch_unwind(AssertUnwindSafe(|| {
+        let maybe_dependent = match catch_unwind(|| {
             // SAFETY: `owner` was just converted from a valid Box, and inherits
             // the alignment and validity guarantees of Box. Additionally, the
             // value behind the pointer is currently not borrowed at all - this
@@ -106,7 +113,7 @@ impl<O: Owner + ?Sized> Pair<O> {
             // returned `Pair` is dropped (or immediately, if `make_dependent`
             // panics or returns an error).
             unsafe { owner.as_ref() }.make_dependent(context)
-        })) {
+        }) {
             Ok(maybe_dependent) => maybe_dependent,
             Err(payload) => {
                 // make_dependent panicked - drop the owner, then resume_unwind
@@ -124,11 +131,11 @@ impl<O: Owner + ?Sized> Pair<O> {
                 // payload of the first panic (from `make_dependent`), so if the
                 // owner's drop panics we just ignore it and continue on to
                 // resume_unwind with `make_dependent`'s payload.
-                let _ = std::panic::catch_unwind(AssertUnwindSafe(|| drop(owner)));
+                let _ = catch_unwind(|| drop(owner));
 
                 // It's very important that we diverge here - carrying on to the
                 // rest of this constructor would be unsound.
-                std::panic::resume_unwind(payload);
+                resume_unwind(payload);
             }
         };
 
@@ -270,7 +277,7 @@ impl<O: Owner + ?Sized> Pair<O> {
         // We're about to drop the dependent - if it panics, we want to be able
         // to drop the boxed owner before unwinding the rest of the stack to
         // avoid unnecessarily leaking memory (and potentially other resources).
-        if let Err(payload) = std::panic::catch_unwind(AssertUnwindSafe(|| drop(dependent))) {
+        if let Err(payload) = catch_unwind(|| drop(dependent)) {
             // Dependent's drop panicked - drop the owner, then resume_unwind
 
             // SAFETY: `this.owner` was originally created from a Box, and never
@@ -286,11 +293,11 @@ impl<O: Owner + ?Sized> Pair<O> {
             // the first panic (from dependent's drop), so if the owner's drop
             // panics we just ignore it and continue on to resume_unwind with
             // the dependent's payload.
-            let _ = std::panic::catch_unwind(AssertUnwindSafe(|| drop(owner)));
+            let _ = catch_unwind(|| drop(owner));
 
             // It's very important that we diverge here - carrying on to the
             // rest of this function would be unsound.
-            std::panic::resume_unwind(payload);
+            resume_unwind(payload);
         }
 
         // SAFETY: `this.owner` was originally created from a Box, and never
@@ -465,7 +472,7 @@ impl<O: Owner + ?Sized> Drop for Pair<O> {
         // We're about to drop the dependent - if it panics, we want to be able
         // to drop the boxed owner before unwinding the rest of the stack to
         // avoid unnecessarily leaking memory (and potentially other resources).
-        if let Err(payload) = std::panic::catch_unwind(AssertUnwindSafe(|| drop(dependent))) {
+        if let Err(payload) = catch_unwind(|| drop(dependent)) {
             // Dependent's drop panicked - drop the owner, then resume_unwind
 
             // SAFETY: `this.owner` was originally created from a Box, and never
@@ -481,11 +488,11 @@ impl<O: Owner + ?Sized> Drop for Pair<O> {
             // the first panic (from dependent's drop), so if the owner's drop
             // panics we just ignore it and continue on to resume_unwind with
             // the dependent's payload.
-            let _ = std::panic::catch_unwind(AssertUnwindSafe(|| drop(owner)));
+            let _ = catch_unwind(|| drop(owner));
 
             // It's very important that we diverge here - carrying on to the
             // rest of drop would be unsound.
-            std::panic::resume_unwind(payload);
+            resume_unwind(payload);
         }
 
         // Drop the owner `Box<O>`
@@ -528,7 +535,7 @@ impl<O: Owner + Debug + ?Sized> Debug for Pair<O>
 where
     for<'any> <O as HasDependent<'any>>::Dependent: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.with_dependent(|dependent| {
             f.debug_struct("Pair")
                 .field("owner", &self.get_owner())

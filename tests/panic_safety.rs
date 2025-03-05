@@ -35,7 +35,7 @@ impl Owner for PanicOnMakeDependent {
 }
 
 #[test]
-fn make_dependent_panic_handled() {
+fn make_dependent_panic_handled_std_only() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let owner_drop_called2 = Rc::clone(&owner_drop_called);
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| {
@@ -75,7 +75,7 @@ impl Owner for PanicOnMakeDependentAndOwnerDrop {
 }
 
 #[test]
-fn make_dependent_and_owner_drop_panic_handled() {
+fn make_dependent_and_owner_drop_panic_handled_std_only() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let owner_drop_called2 = Rc::clone(&owner_drop_called);
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| {
@@ -121,7 +121,7 @@ impl Owner for PanicOnDepDropIntoOwner {
 }
 
 #[test]
-fn dependent_drop_panic_handled_in_into_owner() {
+fn dependent_drop_panic_handled_in_into_owner_std_only() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let pair = Pair::new(PanicOnDepDropIntoOwner(Rc::clone(&owner_drop_called)));
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| pair.into_owner()))
@@ -166,7 +166,7 @@ impl Owner for PanicOnDepAndOwnerDropIntoOwner {
 }
 
 #[test]
-fn dependent_and_owner_drop_panic_handled_in_into_owner() {
+fn dependent_and_owner_drop_panic_handled_in_into_owner_std_only() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let pair = Pair::new(PanicOnDepAndOwnerDropIntoOwner(Rc::clone(
         &owner_drop_called,
@@ -212,7 +212,7 @@ impl Owner for PanicOnDepDropPairDrop {
 }
 
 #[test]
-fn dependent_drop_panic_handled_in_pair_drop() {
+fn dependent_drop_panic_handled_in_pair_drop_std_only() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let pair = Pair::new(PanicOnDepDropPairDrop(Rc::clone(&owner_drop_called)));
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| drop(pair)))
@@ -257,7 +257,7 @@ impl Owner for PanicOnDepAndOwnerDropPairDrop {
 }
 
 #[test]
-fn dependent_and_owner_drop_panic_handled_in_pair_drop() {
+fn dependent_and_owner_drop_panic_handled_in_pair_drop_std_only() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let pair = Pair::new(PanicOnDepAndOwnerDropPairDrop(Rc::clone(
         &owner_drop_called,

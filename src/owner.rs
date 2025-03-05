@@ -1,3 +1,6 @@
+//! Defines the [`Owner`] and [`HasDependent`] traits, the common interface for
+//! types stored in a [`Pair`](crate::Pair).
+
 /// Defines the dependent type for the [`Owner`] trait.
 ///
 /// Semantically, you can think of this like a lifetime Generic Associated Type
@@ -40,7 +43,7 @@ pub trait Owner: for<'any> HasDependent<'any> {
     /// If `make_dependent` can't fail, this should be set to
     /// [`Infallible`](std::convert::Infallible).
     //
-    // TODO(ichen): default this to std::convert::Infallible (or preferably !)
+    // TODO(ichen): default this to core::convert::Infallible (or preferably !)
     // when associated type defaults are stabilized
     // (https://github.com/rust-lang/rust/issues/29661)
     type Error;
@@ -63,7 +66,7 @@ mod sealed {
     /// The `ForImpliedBounds` generic type for
     /// [`HasDependent`](super::HasDependent) should not be overridden from its
     /// default.
-    pub struct Bounds<T>(std::marker::PhantomData<T>);
+    pub struct Bounds<T>(core::marker::PhantomData<T>);
     impl<T> Sealed for Bounds<T> {}
 }
 use sealed::{Bounds, Sealed};
