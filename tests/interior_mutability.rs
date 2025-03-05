@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use pair::{HasDependent, Owner, Pair};
 use std::cell::{Cell, RefCell};
 use std::convert::Infallible;

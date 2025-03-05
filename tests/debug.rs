@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use std::{borrow::Cow, convert::Infallible, fmt::Debug};
 
 use pair::{HasDependent, Owner};
@@ -75,6 +77,7 @@ macro_rules! debug_tests {
         $struct_or_enum $name $decl_body $(; $semicolon_exists)?
 
         impl<$lt> HasDependent<$lt> for $name {
+            #![allow(single_use_lifetimes, reason = "macros lol")]
             type Dependent = $dep_ty;
         }
         impl Owner for $name {

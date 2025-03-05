@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use pair::{HasDependent, Owner, Pair};
 use std::convert::Infallible;
 
@@ -8,7 +10,7 @@ struct ZstOwner;
 #[derive(Debug, PartialEq)]
 struct NonZstDependent(i32);
 
-impl<'owner> HasDependent<'owner> for ZstOwner {
+impl HasDependent<'_> for ZstOwner {
     type Dependent = NonZstDependent;
 }
 
@@ -41,7 +43,7 @@ struct NonZstOwner(i32);
 #[derive(Debug)]
 struct ZstDependent;
 
-impl<'owner> HasDependent<'owner> for NonZstOwner {
+impl HasDependent<'_> for NonZstOwner {
     type Dependent = ZstDependent;
 }
 
@@ -70,7 +72,7 @@ fn test_zst_dependent() {
 // Both owner and dependent are ZSTs
 struct BothZstOwner;
 
-impl<'owner> HasDependent<'owner> for BothZstOwner {
+impl HasDependent<'_> for BothZstOwner {
     type Dependent = ZstDependent;
 }
 

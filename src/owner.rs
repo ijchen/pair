@@ -19,6 +19,10 @@ pub trait HasDependent<'owner, ForImpliedBound: Sealed = Bounds<&'owner Self>> {
     type Dependent;
 }
 
+#[expect(
+    clippy::missing_errors_doc,
+    reason = "failure modes are specific to the trait's implementation"
+)]
 /// A type which can act as the "owner" of some data, and can produce some
 /// dependent type which borrows from `Self`. Used for the [`Pair`](crate::Pair)
 /// struct.
@@ -59,10 +63,12 @@ pub trait Owner: for<'any> HasDependent<'any> {
 /// Used to prevent implementors of [`HasDependent`] from overriding the
 /// `ForImpliedBounds` generic type from its default.
 mod sealed {
+    #![expect(unnameable_types, reason = "...kinda the point")]
     /// The `ForImpliedBounds` generic type for
     /// [`HasDependent`](super::HasDependent) should not be overridden from its
     /// default.
     pub trait Sealed {}
+    #[derive(Debug)]
     /// The `ForImpliedBounds` generic type for
     /// [`HasDependent`](super::HasDependent) should not be overridden from its
     /// default.

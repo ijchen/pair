@@ -15,12 +15,16 @@ include = ["/src/", "/Cargo.toml", "/README.md", "/CHANGELOG.md", "/LICENSE-*"]
 # ON_RELEASE: Remove publish = false
 publish = false
 
+
+
 [dependencies]
 # No dependencies
 
 [dev-dependencies]
 loom = "0.7.2"
 trybuild = "1.0.103"
+
+
 
 [features]
 default = ["std"]
@@ -30,4 +34,42 @@ default = ["std"]
 # gracefully.
 std = []
 
-# TODO: define lints
+
+
+[lints.rust]
+# "deprecated_safe" lint group
+deprecated_safe = { level = "warn", priority = -1 }
+# "future_incompatible" lint group
+future_incompatible = { level = "warn", priority = -1 }
+# "keyword_idents" lint group
+keyword_idents = { level = "warn", priority = -1 }
+# Cherry-picked lint overrides
+unstable_features = "forbid" # do not permit nightly-only features
+elided_lifetimes_in_paths = "warn" # elided lifetimes are unclear
+missing_debug_implementations = "warn" # all public types should impl Debug
+missing_docs = "warn" # all public items should be documented
+non_ascii_idents = "warn" # non-ASCII identifiers could be confusing
+redundant_imports = "warn" # redundant imports are unnecessary
+redundant_lifetimes = "warn" # duplicate identical lifetimes are unnecessary
+single_use_lifetimes = "warn" # single-use lifetimes are unnecessary
+unnameable_types = "warn" # unnameable types should be considered case-by-case
+unused_qualifications = "warn" # overly-qualified paths decrease readability
+
+[lints.clippy]
+# "pedantic" lint group
+pedantic = { level = "warn", priority = -1 }
+must_use_candidate = "allow" # too many false positives
+# "cargo" lint group
+cargo = { level = "warn", priority = -1 }
+# Cherry-picked lint overrides
+multiple_unsafe_ops_per_block = "forbid" # enforce all unsafe ops have a SAFETY comment
+undocumented_unsafe_blocks = "forbid" # enforce all unsafe ops have a SAFETY comment
+unnecessary_safety_comment = "warn" # unnecessary SAFETY comments would be confusing
+unnecessary_safety_doc = "warn" # unnecessary "# Safety" sections would be confusing
+allow_attributes = "warn" # prefer #[expect(..)]
+allow_attributes_without_reason = "warn" # should always include a reason
+dbg_macro = "warn" # this macro should only be used during development
+todo = "warn" # this macro should only be used during development
+cognitive_complexity = "warn" # can be #[expect(..)]ed, but useful as a warning
+too_long_first_doc_paragraph = "warn" # first doc paragraph should be brief
+use_self = "warn" # `Self` is more clear when applicable

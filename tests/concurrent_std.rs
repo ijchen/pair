@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use std::sync::{Arc, Mutex, RwLock, mpsc};
 
 use pair::{HasDependent, Owner, Pair};

@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use std::{
     cell::RefCell,
     convert::Infallible,
@@ -18,7 +20,7 @@ impl Drop for PanicOnMakeDependent {
     }
 }
 
-impl<'owner> HasDependent<'owner> for PanicOnMakeDependent {
+impl HasDependent<'_> for PanicOnMakeDependent {
     type Dependent = ();
 }
 
@@ -58,7 +60,7 @@ impl Drop for PanicOnMakeDependentAndOwnerDrop {
     }
 }
 
-impl<'owner> HasDependent<'owner> for PanicOnMakeDependentAndOwnerDrop {
+impl HasDependent<'_> for PanicOnMakeDependentAndOwnerDrop {
     type Dependent = ();
 }
 
@@ -104,7 +106,7 @@ impl Drop for PanicOnDepDropIntoOwnerDep {
         panic_any(MyPayload(11));
     }
 }
-impl<'owner> HasDependent<'owner> for PanicOnDepDropIntoOwner {
+impl HasDependent<'_> for PanicOnDepDropIntoOwner {
     type Dependent = PanicOnDepDropIntoOwnerDep;
 }
 
@@ -149,7 +151,7 @@ impl Drop for PanicOnDepAndOwnerDropIntoOwnerDep {
         panic_any(MyPayload(1));
     }
 }
-impl<'owner> HasDependent<'owner> for PanicOnDepAndOwnerDropIntoOwner {
+impl HasDependent<'_> for PanicOnDepAndOwnerDropIntoOwner {
     type Dependent = PanicOnDepAndOwnerDropIntoOwnerDep;
 }
 
@@ -195,7 +197,7 @@ impl Drop for PanicOnDepDropPairDropDep {
         panic_any(MyPayload(3));
     }
 }
-impl<'owner> HasDependent<'owner> for PanicOnDepDropPairDrop {
+impl HasDependent<'_> for PanicOnDepDropPairDrop {
     type Dependent = PanicOnDepDropPairDropDep;
 }
 
@@ -240,7 +242,7 @@ impl Drop for PanicOnDepAndOwnerDropPairDropDep {
         panic_any(MyPayload(5));
     }
 }
-impl<'owner> HasDependent<'owner> for PanicOnDepAndOwnerDropPairDrop {
+impl HasDependent<'_> for PanicOnDepAndOwnerDropPairDrop {
     type Dependent = PanicOnDepAndOwnerDropPairDropDep;
 }
 

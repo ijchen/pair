@@ -44,6 +44,13 @@ pub fn catch_unwind<F: FnOnce() -> R, R>(f: F) -> Result<R, PanicPayload> {
     output
 }
 
+#[cfg_attr(
+    not(feature = "std"),
+    expect(
+        clippy::needless_pass_by_value,
+        reason = "needs to be pass by value for std"
+    )
+)]
 /// [`std::panic::resume_unwind`], abstracted to work with and without `std`.
 ///
 /// With `std`, this function just delegates to [`std::panic::resume_unwind`].

@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use std::convert::Infallible;
 
 use pair::{HasDependent, Owner, Pair};

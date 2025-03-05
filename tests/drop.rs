@@ -1,3 +1,5 @@
+#![allow(missing_docs, reason = "integration test")]
+
 use std::{cell::RefCell, convert::Infallible, rc::Rc};
 
 use pair::{HasDependent, Owner, Pair};
@@ -22,7 +24,7 @@ impl<T> Drop for OnDropDep<T> {
         (self.f)(&mut self.value.borrow_mut())
     }
 }
-impl<'owner, T> HasDependent<'owner> for OnDrop<T> {
+impl<T> HasDependent<'_> for OnDrop<T> {
     type Dependent = OnDropDep<T>;
 }
 

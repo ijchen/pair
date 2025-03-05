@@ -45,13 +45,14 @@ pub struct Pair<O: Owner + ?Sized> {
     prevent_covariance: PhantomData<*mut O>,
 }
 
-/// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned NonNull is the same
+/// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned `NonNull` is the same
 /// pointer as the Box, and therefore comes with all of Box's representation
 /// guarantees:
-/// - The returned NonNull will be suitably aligned for T
-/// - The returned NonNull will point to a valid T
-/// - The returned NonNull was allocated with the [`Global`](std::alloc::Global)
-///   allocator and a valid [`Layout`](std::alloc::Layout) for `T`.
+/// - The returned `NonNull` will be suitably aligned for T
+/// - The returned `NonNull` will point to a valid T
+/// - The returned `NonNull` was allocated with the
+///   [`Global`](std::alloc::Global) allocator and a valid
+///   [`Layout`](std::alloc::Layout) for `T`.
 fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     // See: https://github.com/rust-lang/rust/issues/47336#issuecomment-586578713
     NonNull::from(Box::leak(value))
@@ -69,6 +70,10 @@ impl<O: Owner + ?Sized> Pair<O> {
     ///
     /// If this construction can't fail, consider the convenience constructor
     /// [`Pair::new_with_context`], which returns `Self` directly.
+    ///
+    /// # Errors
+    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
+    /// error.
     pub fn try_new_with_context(owner: O, context: O::Context<'_>) -> Result<Self, (O, O::Error)>
     where
         O: Sized,
@@ -89,6 +94,10 @@ impl<O: Owner + ?Sized> Pair<O> {
     ///
     /// If this construction can't fail, consider the convenience constructor
     /// [`Pair::new_from_box_with_context`], which returns `Self` directly.
+    ///
+    /// # Errors
+    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
+    /// error.
     pub fn try_new_from_box_with_context(
         owner: Box<O>,
         context: O::Context<'_>,
@@ -370,6 +379,10 @@ impl<O: for<'any> Owner<Context<'any> = ()> + ?Sized> Pair<O> {
     ///
     /// If this construction can't fail, consider the convenience constructor
     /// [`Pair::new`], which returns `Self` directly.
+    ///
+    /// # Errors
+    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
+    /// error.
     pub fn try_new(owner: O) -> Result<Self, (O, O::Error)>
     where
         O: Sized,
@@ -390,6 +403,10 @@ impl<O: for<'any> Owner<Context<'any> = ()> + ?Sized> Pair<O> {
     ///
     /// If this construction can't fail, consider the convenience constructor
     /// [`Pair::new_from_box`], which returns `Self` directly.
+    ///
+    /// # Errors
+    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
+    /// error.
     pub fn try_new_from_box(owner: Box<O>) -> Result<Self, (Box<O>, O::Error)> {
         Self::try_new_from_box_with_context(owner, ())
     }
