@@ -4,7 +4,7 @@
 // ON_RELEASE: the below link(s) should be verified to match the readme, and
 // this "on release" comment removed (the above one should stay).
 //! [`Pair`]: Pair
-#![doc = include_str!("../README.md")]
+#![cfg_attr(any(doc, test), doc = include_str!("../README.md"))]
 
 mod owner;
 mod pair;
