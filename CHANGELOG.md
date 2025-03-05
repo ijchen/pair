@@ -1,4 +1,4 @@
-<!-- ON_RELEASE: Add changelog entry for new version - remove this comment -->
+<!-- ON_RELEASE: Add changelog entry for new version and remove this comment -->
 
 # Major Version 0
 

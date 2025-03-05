@@ -4,6 +4,7 @@ You define how to construct a dependent type from a reference to an owning type,
 and `pair` will carefully bundle them together in a safe and freely movable
 self-referential struct.
 
+<!-- ON_RELEASE: for 1.0, permanantly remove this section (and this comment) -->
 # DO NOT USE THIS LIBRARY
 
 As of right now, I have absolutely no idea whether or not this API is sound. You
