@@ -1,3 +1,4 @@
+cargo fmt --check && \
 cargo clippy && \
 cargo test && \
 # TODO: trybuild tests fail on nightly (and beta) - error messages changed
