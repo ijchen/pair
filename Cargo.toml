@@ -1,21 +1,30 @@
+# # # # # # # # # # # # # # # # # # # #
+#                                     #
+#               PACKAGE               #
+#                                     #
+# # # # # # # # # # # # # # # # # # # #
+
 [package]
 name = "pair"
-# ON_RELEASE: Bump version. Don't forget to do all other "ON_RELEASE" tasks!
-version = "0.1.0"
+version = "0.1.0" # ON_RELEASE: Bump version. Also, do all "ON_RELEASE" tasks
 authors = ["Isaac Chen"]
+edition = "2024"
+# rust-version = "TODO" # TODO
 description = "Safe API for generic self-referential pairs of owner and dependent."
+documentation = "https://docs.rs/pair"
+readme = "README.md"
+repository = "https://github.com/ijchen/pair"
 license = "MIT OR Apache-2.0"
 keywords = ["self-referential", "data-structures", "memory", "ownership", "no_std"]
 categories = ["memory-management", "rust-patterns", "no-std", "data-structures"]
-readme = "README.md"
-repository = "https://github.com/ijchen/pair"
-documentation = "https://docs.rs/pair"
-edition = "2024"
 include = ["/src/", "/Cargo.toml", "/README.md", "/CHANGELOG.md", "/LICENSE-*"]
-# ON_RELEASE: Remove publish = false
-publish = false
+publish = false # ON_RELEASE: Remove publish = false
 
-
+# # # # # # # # # # # # # # # # # # # #
+#                                     #
+#            DEPENDENCIES             #
+#                                     #
+# # # # # # # # # # # # # # # # # # # #
 
 [dependencies]
 # No dependencies
@@ -24,7 +33,11 @@ publish = false
 loom = "0.7.2"
 trybuild = "1.0.103"
 
-
+# # # # # # # # # # # # # # # # # # # #
+#                                     #
+#              FEATURES               #
+#                                     #
+# # # # # # # # # # # # # # # # # # # #
 
 [features]
 default = ["std"]
@@ -34,15 +47,23 @@ default = ["std"]
 # gracefully.
 std = []
 
-
+# # # # # # # # # # # # # # # # # # # #
+#                                     #
+#                LINTS                #
+#                                     #
+# # # # # # # # # # # # # # # # # # # #
 
 [lints.rust]
+
 # "deprecated_safe" lint group
 deprecated_safe = { level = "warn", priority = -1 }
+
 # "future_incompatible" lint group
 future_incompatible = { level = "warn", priority = -1 }
+
 # "keyword_idents" lint group
 keyword_idents = { level = "warn", priority = -1 }
+
 # Cherry-picked lint overrides
 unstable_features = "forbid" # do not permit nightly-only features
 elided_lifetimes_in_paths = "warn" # elided lifetimes are unclear
@@ -55,12 +76,17 @@ single_use_lifetimes = "warn" # single-use lifetimes are unnecessary
 unnameable_types = "warn" # unnameable types should be considered case-by-case
 unused_qualifications = "warn" # overly-qualified paths decrease readability
 
+
+
 [lints.clippy]
+
 # "pedantic" lint group
 pedantic = { level = "warn", priority = -1 }
 must_use_candidate = "allow" # too many false positives
+
 # "cargo" lint group
 cargo = { level = "warn", priority = -1 }
+
 # Cherry-picked lint overrides
 multiple_unsafe_ops_per_block = "forbid" # enforce all unsafe ops have a SAFETY comment
 undocumented_unsafe_blocks = "forbid" # enforce all unsafe ops have a SAFETY comment
