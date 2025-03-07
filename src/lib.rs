@@ -13,7 +13,6 @@ extern crate alloc;
 extern crate std;
 
 // TODO: move this to-do list to a to-do.md or smth
-// - re-organize Cargo.toml to be more readable (esp. package section order)
 // - document feature flags in README
 // - clean up ci.sh
 
