@@ -14,7 +14,7 @@ extern crate std;
 
 // TODO: move this to-do list to a to-do.md or smth
 // - document feature flags in README
-// - clean up ci.sh
+// - deal with trybuild tests failing on 1.86.0+
 
 mod owner;
 mod pair;
