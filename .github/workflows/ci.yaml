@@ -7,14 +7,14 @@ env:
   CARGO_TERM_COLOR: always # Pretty colors
 jobs:
   check_fmt:
-    name: cargo fmt
+    name: Cargo fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: cargo fmt
+      - name: Cargo fmt
         run: ./ci.sh check_fmt
 
   check_docs:
