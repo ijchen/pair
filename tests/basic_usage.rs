@@ -38,12 +38,13 @@ fn basic_usage() {
         pair.with_dependent(|d| d),
         &["This", "is", "a", "test", "of", "pair.", "hi", "hey"]
     );
-    pair.with_dependent_mut(|dep| dep.sort());
+    pair.with_dependent_mut(|dep| dep.sort_unstable());
     assert_eq!(
         pair.with_dependent(|d| d),
         &["This", "a", "hey", "hi", "is", "of", "pair.", "test"]
     );
 
+    #[expect(clippy::redundant_closure_for_method_calls, reason = "false positive")]
     let last_word = pair.with_dependent_mut(|dep| dep.pop());
     assert_eq!(last_word, Some("test"));
     assert_eq!(
@@ -78,6 +79,10 @@ fn basic_api_stress_test() {
     let owner1 = pair.get_owner();
     let owner2 = pair.get_owner();
     println!("{owner1:?}{owner2:?}");
+    #[expect(
+        clippy::redundant_closure_call,
+        reason = "I'm just doing weird stuff for funsies and testing"
+    )]
     let new_pair = (|x| x)(std::convert::identity(pair));
     let owner1 = new_pair.get_owner();
     let owner2 = new_pair.get_owner();

@@ -25,6 +25,10 @@ mod fake {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "more ergonomic in the a later macro invocation"
+)]
 fn debugs_match<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + Clone + Debug>(
     owner: O,
 ) where
@@ -117,7 +121,7 @@ fn debug_impls_match_derive_nomiri() {
     debug_tests! {
         struct O3(char);
         &'owner self => Option<Vec<()>>:
-            Some(std::iter::repeat(()).take(self.0 as usize % 20).collect());
+            Some(std::iter::repeat_n((), self.0 as usize % 20).collect());
 
         O3('🦀'), O3(' '), O3('!'), O3('a'), O3('A'), O3('*'), O3('-'), O3('~'),
         O3('\\'), O3('"'), O3('\x00'), O3('\n'), O3('\t'), O3('\''), O3('&'),
@@ -130,11 +134,11 @@ fn debug_impls_match_derive_nomiri() {
                 .to_be_bytes()
                 .iter()
                 .copied()
-                .reduce(|acc, e| u8::wrapping_add(acc, e))
+                .reduce(u8::wrapping_add)
                 .unwrap();
 
-        O4(0.0), O4(-0.0), O4(1.0), O4(3.14), O4(f64::NAN), O4(f64::INFINITY),
-        O4(f64::NEG_INFINITY), O4(f64::EPSILON),
+        O4(0.0), O4(-0.0), O4(1.0), O4(std::f64::consts::PI), O4(f64::NAN),
+        O4(f64::INFINITY), O4(f64::NEG_INFINITY), O4(f64::EPSILON),
     }
 
     debug_tests! {

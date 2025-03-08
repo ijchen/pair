@@ -37,7 +37,7 @@ impl Owner for Buff {
 
 // Test sending ownership of a Pair between threads through channels
 #[test]
-fn pair_ownership_transfer_loom() {
+fn pair_ownership_transfer_loom_nomiri() {
     loom::model(|| {
         let (tx, rx) = mpsc::channel();
 
@@ -77,7 +77,7 @@ fn pair_ownership_transfer_loom() {
 
 // Test sending and sharing a Pair via Arc<Pair<_>> across multiple threads
 #[test]
-fn pair_arc_sharing_loom() {
+fn pair_arc_sharing_loom_nomiri() {
     loom::model(|| {
         let pair = Arc::new(Pair::new(Buff(String::from("arc sharing test"))));
 
@@ -106,7 +106,7 @@ fn pair_arc_sharing_loom() {
 
 // Test concurrently accessing an Arc<Mutex<Pair>> from multiple threads
 #[test]
-fn pair_mutex_concurrent_access_loom() {
+fn pair_mutex_concurrent_access_loom_nomiri() {
     loom::model(|| {
         let pair = Arc::new(Mutex::new(Pair::new(Buff(String::from(
             "mutex concurrent test",
@@ -150,7 +150,7 @@ fn pair_mutex_concurrent_access_loom() {
 
 // Test concurrently accessing an Arc<RwLock<Pair>> from multiple threads
 #[test]
-fn pair_rwlock_concurrent_access_loom() {
+fn pair_rwlock_concurrent_access_loom_nomiri() {
     loom::model(|| {
         let pair = Arc::new(RwLock::new(Pair::new(Buff(String::from(
             "rwlock concurrent test",

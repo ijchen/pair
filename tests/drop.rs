@@ -11,7 +11,7 @@ struct OnDrop<T> {
 }
 impl<T> Drop for OnDrop<T> {
     fn drop(&mut self) {
-        (self.f)(&mut self.value.borrow_mut())
+        (self.f)(&mut self.value.borrow_mut());
     }
 }
 
@@ -21,7 +21,7 @@ struct OnDropDep<T> {
 }
 impl<T> Drop for OnDropDep<T> {
     fn drop(&mut self) {
-        (self.f)(&mut self.value.borrow_mut())
+        (self.f)(&mut self.value.borrow_mut());
     }
 }
 impl<T> HasDependent<'_> for OnDrop<T> {

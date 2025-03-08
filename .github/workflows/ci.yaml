@@ -1,0 +1,103 @@
+name: CI
+
+# Run on any push or any PR (both for any branch)
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always # Pretty colors
+jobs:
+  check_fmt:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh check_fmt
+
+  check_docs:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh check_docs
+
+  build:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh build
+
+  lint:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh lint
+
+  run_tests_stable:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh run_tests_stable
+
+  run_tests_beta:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@beta
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh run_tests_beta
+
+  run_tests_msrv:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh run_tests_msrv
+
+  run_tests_leak_sanitizer:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh run_tests_leak_sanitizer
+
+  run_tests_miri:
+    name: TODO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - uses: Swatinem/rust-cache@v2
+      - name: TODO # TODO
+        run: ./ci.sh run_tests_miri

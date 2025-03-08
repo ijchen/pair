@@ -12,9 +12,9 @@ struct MultiPartOwner {
 }
 
 struct MultiPartDependent<'a> {
-    string_ref: &'a str,
-    int_ref: &'a i32,
-    bool_ref: &'a bool,
+    string: &'a str,
+    int: &'a i32,
+    boolean: &'a bool,
 }
 
 impl<'owner> HasDependent<'owner> for MultiPartOwner {
@@ -30,15 +30,17 @@ impl Owner for MultiPartOwner {
         (): Self::Context<'_>,
     ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
         Ok(MultiPartDependent {
-            string_ref: &self.field1,
-            int_ref: &self.field2[0],
-            bool_ref: &self.field3,
+            string: &self.field1,
+            int: &self.field2[0],
+            boolean: &self.field3,
         })
     }
 }
 
 #[test]
 fn test_multiple_borrows() {
+    #![expect(clippy::bool_assert_comparison, reason = "for clarity and consistency")]
+
     let owner = MultiPartOwner {
         field1: "Hello, world!".to_string(),
         field2: vec![3, 1, 4, 1, 5],
@@ -49,9 +51,9 @@ fn test_multiple_borrows() {
     let pair = Pair::new(owner);
 
     pair.with_dependent(|dep| {
-        assert_eq!(dep.string_ref, "Hello, world!");
-        assert_eq!(*dep.int_ref, 3);
-        assert_eq!(*dep.bool_ref, true);
+        assert_eq!(dep.string, "Hello, world!");
+        assert_eq!(*dep.int, 3);
+        assert_eq!(*dep.boolean, true);
     });
 
     let owner = pair.into_owner();
