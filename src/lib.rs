@@ -12,10 +12,6 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-// TODO: move this to-do list to a to-do.md or smth
-// - document feature flags in README
-// - deal with trybuild tests failing on 1.86.0+
-
 mod owner;
 mod pair;
 mod panicking;
