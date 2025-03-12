@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
 # Prints text formatted as a header (colors and arrows and stuff, very cool)
@@ -97,31 +98,25 @@ run_tests_leak_sanitizer() {
 # NOTE: MIRI runs pretty slowly, so splitting up the MIRI tests in CI actually
 # gives a pretty meaningful speedup.
 run_tests_miri_default_features() {
-    # TODO: figure out any MIRI flags we want (retag fields thing?)
-
     # NOTE: some tests (containing `nomiri`) can't run under MIRI, and are
     # skipped here.
     print_header 'Running tests with MIRI (default features)...'
-    RUSTFLAGS='-D warnings' cargo +nightly miri test -- --skip nomiri
+    RUSTFLAGS='-D warnings' MIRIFLAGS='-Zmiri-strict-provenance' cargo +nightly miri test -- --skip nomiri
 }
 
 run_tests_miri_no_features() {
-    # TODO: figure out any MIRI flags we want (retag fields thing?)
-
     # NOTE: some tests (containing `nomiri`) can't run under MIRI, and are
     # skipped here.
     # NOTE: some tests (containing `std_only`) require the `std` feature to run.
     print_header 'Running tests with MIRI (no features)...'
-    RUSTFLAGS='-D warnings' cargo +nightly miri test --no-default-features -- --skip nomiri --skip std_only
+    RUSTFLAGS='-D warnings' MIRIFLAGS='-Zmiri-strict-provenance' cargo +nightly miri test --no-default-features -- --skip nomiri --skip std_only
 }
 
 run_tests_miri_all_features() {
-    # TODO: figure out any MIRI flags we want (retag fields thing?)
-
     # NOTE: some tests (containing `nomiri`) can't run under MIRI, and are
     # skipped here.
     print_header 'Running tests with MIRI (all features)...'
-    RUSTFLAGS='-D warnings' cargo +nightly miri test --all-features -- --skip nomiri
+    RUSTFLAGS='-D warnings' MIRIFLAGS='-Zmiri-strict-provenance' cargo +nightly miri test --all-features -- --skip nomiri
 }
 
 # Run all checks
@@ -146,42 +141,18 @@ main() {
     local command="${1:-"all"}"
 
     case "$command" in
-        "all")
-            all_checks
-            ;;
-        "check_fmt")
-            check_fmt
-            ;;
-        "check_docs")
-            check_docs
-            ;;
-        "build")
-            build
-            ;;
-        "lint")
-            lint
-            ;;
-        "run_tests_stable")
-            run_tests_stable
-            ;;
-        "run_tests_beta")
-            run_tests_beta
-            ;;
-        "run_tests_msrv")
-            run_tests_msrv
-            ;;
-        "run_tests_leak_sanitizer")
-            run_tests_leak_sanitizer
-            ;;
-        "run_tests_miri_default_features")
-            run_tests_miri_default_features
-            ;;
-        "run_tests_miri_no_features")
-            run_tests_miri_no_features
-            ;;
-        "run_tests_miri_all_features")
-            run_tests_miri_all_features
-            ;;
+        "all")                             all_checks                      ;;
+        "check_fmt")                       check_fmt                       ;;
+        "check_docs")                      check_docs                      ;;
+        "build")                           build                           ;;
+        "lint")                            lint                            ;;
+        "run_tests_stable")                run_tests_stable                ;;
+        "run_tests_beta")                  run_tests_beta                  ;;
+        "run_tests_msrv")                  run_tests_msrv                  ;;
+        "run_tests_leak_sanitizer")        run_tests_leak_sanitizer        ;;
+        "run_tests_miri_default_features") run_tests_miri_default_features ;;
+        "run_tests_miri_no_features")      run_tests_miri_no_features      ;;
+        "run_tests_miri_all_features")     run_tests_miri_all_features     ;;
         *)
             echo "Unknown command: $command"
             echo "Available commands: all (default), check_fmt, check_docs, build, lint, run_tests_stable, run_tests_beta, run_tests_msrv, run_tests_leak_sanitizer, run_tests_miri_default_features, run_tests_miri_no_features, run_tests_miri_all_features"
