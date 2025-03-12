@@ -105,6 +105,12 @@ code could do. When the owner needs to be dropped or recovered, the dependent
 will first be recovered and dropped, ending the borrow of the owner. At that
 point, the owner can safely be recovered and the `Pair` deconstructed.
 
+# Feature Flags
+
+The following feature flags are available:
+- `std` (enabled by default) - Enables usage of the standard library within
+  pair. Without the standard library, pair cannot handle panics as gracefully.
+
 # Related Projects
 
 | Crate | Macro free | No `alloc` | Maintained | Soundness |
