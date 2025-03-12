@@ -16,17 +16,6 @@ check_docs() {
     RUSTDOCFLAGS='-D warnings' cargo +stable doc --document-private-items --no-deps
 }
 
-build() {
-    print_header 'Running cargo build (default features)...'
-    RUSTFLAGS='-D warnings' cargo +stable build --all-targets
-
-    print_header 'Running cargo build (no features)...'
-    RUSTFLAGS='-D warnings' cargo +stable build --all-targets --no-default-features
-
-    print_header 'Running cargo build (all features)...'
-    RUSTFLAGS='-D warnings' cargo +stable build --all-targets --all-features
-}
-
 lint() {
     print_header 'Linting with cargo clippy (default features)...'
     cargo +stable clippy --no-deps --all-targets -- -D warnings
@@ -36,6 +25,17 @@ lint() {
 
     print_header 'Linting with cargo clippy (all features)...'
     cargo +stable clippy --no-deps --all-targets --all-features -- -D warnings
+}
+
+build() {
+    print_header 'Running cargo build (default features)...'
+    RUSTFLAGS='-D warnings' cargo +stable build --all-targets
+
+    print_header 'Running cargo build (no features)...'
+    RUSTFLAGS='-D warnings' cargo +stable build --all-targets --no-default-features
+
+    print_header 'Running cargo build (all features)...'
+    RUSTFLAGS='-D warnings' cargo +stable build --all-targets --all-features
 }
 
 run_tests_stable() {
