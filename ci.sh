@@ -52,17 +52,15 @@ run_tests_stable() {
 }
 
 run_tests_beta() {
-    # TODO: trybuild tests fail on nightly (and beta) - error messages changed
-
     print_header 'Running tests (beta compiler, default features)...'
-    RUSTFLAGS='-D warnings' cargo +beta test -- --skip try_builds
+    RUSTFLAGS='-D warnings' cargo +beta test
 
     # NOTE: some tests (containing `std_only`) require the `std` feature to run.
     print_header 'Running tests (beta compiler, no features)...'
-    RUSTFLAGS='-D warnings' cargo +beta test --no-default-features -- --skip std_only --skip try_builds
+    RUSTFLAGS='-D warnings' cargo +beta test --no-default-features -- --skip std_only
 
     print_header 'Running tests (beta compiler, all features)...'
-    RUSTFLAGS='-D warnings' cargo +beta test --all-features -- --skip try_builds
+    RUSTFLAGS='-D warnings' cargo +beta test --all-features
 }
 
 run_tests_msrv() {
@@ -82,17 +80,16 @@ run_tests_msrv() {
 run_tests_leak_sanitizer() {
     # NOTE: loom seems to make the leak sanitizer unhappy. I don't think that
     # combination of tests is important, so we just skip loom tests here.
-    # TODO: trybuild tests fail on nightly (and beta) - error messages changed
 
     print_header 'Running tests with leak sanitizer (default features)...'
-    RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test -- --skip loom --skip try_builds
+    RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test -- --skip loom
 
     # NOTE: some tests (containing `std_only`) require the `std` feature to run.
     print_header 'Running tests with leak sanitizer (no features)...'
-    RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test --no-default-features -- --skip std_only --skip loom --skip try_builds
+    RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test --no-default-features -- --skip std_only --skip loom
 
     print_header 'Running tests with leak sanitizer (all features)...'
-    RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test --all-features -- --skip loom --skip try_builds
+    RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test --all-features -- --skip loom
 }
 
 # NOTE: MIRI runs pretty slowly, so splitting up the MIRI tests in CI actually

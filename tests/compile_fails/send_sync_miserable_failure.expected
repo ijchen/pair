@@ -1,0 +1,5 @@
+cannot be sent between threads safely
+tests/compile_fails/send_sync_miserable_failure.rs
+required for `Pair<NotSendOrSync>` to implement `Send`
+cannot be shared between threads safely
+required for `Pair<NotSendOrSync>` to implement `Sync`

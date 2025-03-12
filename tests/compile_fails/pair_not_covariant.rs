@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+extern crate pair;
+
 use std::{convert::Infallible, marker::PhantomData};
 
 use pair::{HasDependent, Owner, Pair};

@@ -31,7 +31,6 @@ publish = false # ON_RELEASE: Remove publish = false
 
 [dev-dependencies]
 loom = "0.7.2"
-trybuild = "1.0.103"
 
 # # # # # # # # # # # # # # # # # # # #
 #                                     #

@@ -1,14 +1,17 @@
+extern crate pair;
+
 use std::{cell::UnsafeCell, convert::Infallible};
 
 use pair::{HasDependent, Owner, Pair};
 
+struct MyOwner;
 struct NotSync(UnsafeCell<()>);
 
-impl<'owner> HasDependent<'owner> for NotSync {
-    type Dependent = ();
+impl<'owner> HasDependent<'owner> for MyOwner {
+    type Dependent = NotSync;
 }
 
-impl Owner for NotSync {
+impl Owner for MyOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
@@ -24,9 +27,9 @@ fn check_send<T: Send>() {}
 fn check_sync<T: Sync>() {}
 
 fn main() {
-    check_send::<(NotSync, <NotSync as HasDependent>::Dependent)>();
-    check_sync::<<NotSync as HasDependent>::Dependent>();
+    check_send::<(MyOwner, <MyOwner as HasDependent>::Dependent)>();
+    check_sync::<MyOwner>();
 
-    check_send::<Pair<NotSync>>();
-    check_sync::<Pair<NotSync>>();
+    check_send::<Pair<MyOwner>>();
+    check_sync::<Pair<MyOwner>>();
 }

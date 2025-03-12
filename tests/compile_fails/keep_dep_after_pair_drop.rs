@@ -1,3 +1,5 @@
+extern crate pair;
+
 use std::convert::Infallible;
 
 use pair::{HasDependent, Owner, Pair};
@@ -22,6 +24,10 @@ impl Owner for Buff {
 }
 
 fn main() {
-    let mut pair = Pair::new(Buff(String::from("This is a test of pair.")));
-    let _: &mut Vec<&str> = pair.with_dependent_mut(|dep| dep);
+    let pair = Pair::new(Buff(String::from("This is a test of pair.")));
+    let dep: &Vec<&str> = pair.with_dependent(|dep| dep);
+
+    drop(pair);
+
+    let _ = dep;
 }

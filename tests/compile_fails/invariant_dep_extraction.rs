@@ -1,3 +1,5 @@
+extern crate pair;
+
 use std::{cell::Cell, convert::Infallible, marker::PhantomData};
 
 use pair::{HasDependent, Owner, Pair};

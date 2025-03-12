@@ -1,3 +1,5 @@
+extern crate pair;
+
 use std::convert::Infallible;
 
 use pair::{HasDependent, Owner, Pair};
