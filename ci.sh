@@ -94,16 +94,10 @@ run_tests_leak_sanitizer() {
     RUSTFLAGS='-D warnings -Z sanitizer=leak' cargo +nightly test --all-features -- --skip loom --skip try_builds
 }
 
-# # NOTE: MIRI runs pretty slowly, so splitting up the MIRI tests in CI actually
-# # gives a pretty meaningful speedup.
+# NOTE: MIRI runs pretty slowly, so splitting up the MIRI tests in CI actually
+# gives a pretty meaningful speedup.
 run_tests_miri_default_features() {
     # TODO: figure out any MIRI flags we want (retag fields thing?)
-
-    # TODO: MIRI currently has a bug where it just hangs on doctests in edition
-    # 2024 - until this is fixed, we do some jank to revert edition temporarily
-    cp Cargo.toml Cargo.toml.backup && \
-    trap 'mv Cargo.toml.backup Cargo.toml' EXIT && \
-    sed -i 's/edition = "2024"/edition = "2021"/' Cargo.toml && \
 
     # NOTE: some tests (containing `nomiri`) can't run under MIRI, and are
     # skipped here.
@@ -114,12 +108,6 @@ run_tests_miri_default_features() {
 run_tests_miri_no_features() {
     # TODO: figure out any MIRI flags we want (retag fields thing?)
 
-    # TODO: MIRI currently has a bug where it just hangs on doctests in edition
-    # 2024 - until this is fixed, we do some jank to revert edition temporarily
-    cp Cargo.toml Cargo.toml.backup && \
-    trap 'mv Cargo.toml.backup Cargo.toml' EXIT && \
-    sed -i 's/edition = "2024"/edition = "2021"/' Cargo.toml && \
-
     # NOTE: some tests (containing `nomiri`) can't run under MIRI, and are
     # skipped here.
     # NOTE: some tests (containing `std_only`) require the `std` feature to run.
@@ -129,12 +117,6 @@ run_tests_miri_no_features() {
 
 run_tests_miri_all_features() {
     # TODO: figure out any MIRI flags we want (retag fields thing?)
-
-    # TODO: MIRI currently has a bug where it just hangs on doctests in edition
-    # 2024 - until this is fixed, we do some jank to revert edition temporarily
-    cp Cargo.toml Cargo.toml.backup && \
-    trap 'mv Cargo.toml.backup Cargo.toml' EXIT && \
-    sed -i 's/edition = "2024"/edition = "2021"/' Cargo.toml && \
 
     # NOTE: some tests (containing `nomiri`) can't run under MIRI, and are
     # skipped here.
