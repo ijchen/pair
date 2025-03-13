@@ -8,4 +8,3 @@
   - license
   - MSRV
 - Update changelog
-- Test with non-1ZST in ZST tests
