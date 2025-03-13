@@ -1,7 +1,7 @@
 Safe API for generic self-referential pairs of owner and dependent.
 
 You define how to construct a dependent type from a reference to an owning type,
-and `pair` will carefully bundle them together in a safe and freely movable
+and [`Pair`] will carefully bundle them together in a safe and freely movable
 self-referential struct.
 
 <!-- ON_RELEASE: for 1.0, permanantly remove this section (and this comment) -->
@@ -96,6 +96,9 @@ fn main() {
 
 # How it Works
 
+*Note: the implementation details described in this section are not part of the
+crate's public API, and are subject to change.*
+
 Under the hood, [`Pair`] moves the owner onto the heap, giving it a stable
 memory address. It is then borrowed and used to construct the dependent, which
 is also moved onto the heap. The dependent is type-erased, so that its
@@ -108,7 +111,7 @@ point, the owner can safely be recovered and the `Pair` deconstructed.
 # Feature Flags
 
 The following feature flags are available:
-- `std` (enabled by default) - Enables usage of the standard library within
+- `std` *(enabled by default)* - Enables usage of the standard library within
   pair. Without the standard library, pair cannot handle panics as gracefully.
 
 # Related Projects
