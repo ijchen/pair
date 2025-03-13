@@ -42,6 +42,11 @@ build() {
     RUSTFLAGS='-D warnings' cargo +stable build --all-targets --all-features
 }
 
+build_nostd() {
+    print_header 'Building on no_std target...'
+    RUSTFLAGS='-D warnings' cargo +stable build --target thumbv6m-none-eabi --no-default-features
+}
+
 run_tests_stable() {
     print_header 'Running tests (stable compiler, default features)...'
     RUSTFLAGS='-D warnings' cargo +stable test
@@ -124,6 +129,7 @@ all_checks() {
     check_fmt
     check_docs
     build
+    build_nostd
     lint
     run_tests_stable
     run_tests_beta
@@ -144,8 +150,9 @@ main() {
         "all")                             all_checks                      ;;
         "check_fmt")                       check_fmt                       ;;
         "check_docs")                      check_docs                      ;;
-        "build")                           build                           ;;
         "lint")                            lint                            ;;
+        "build")                           build                           ;;
+        "build_nostd")                     build_nostd                     ;;
         "run_tests_stable")                run_tests_stable                ;;
         "run_tests_beta")                  run_tests_beta                  ;;
         "run_tests_msrv")                  run_tests_msrv                  ;;
@@ -155,7 +162,7 @@ main() {
         "run_tests_miri_all_features")     run_tests_miri_all_features     ;;
         *)
             echo "Unknown command: $command"
-            echo "Available commands: all (default), check_fmt, check_docs, build, lint, run_tests_stable, run_tests_beta, run_tests_msrv, run_tests_leak_sanitizer, run_tests_miri_default_features, run_tests_miri_no_features, run_tests_miri_all_features"
+            echo "Available commands: all (default), check_fmt, check_docs, lint, build, build_nostd, run_tests_stable, run_tests_beta, run_tests_msrv, run_tests_leak_sanitizer, run_tests_miri_default_features, run_tests_miri_no_features, run_tests_miri_all_features"
             exit 1
             ;;
     esac
