@@ -13,8 +13,11 @@ check_fmt() {
 }
 
 check_docs() {
-    print_header 'Building documentation...'
+    print_header 'Building documentation (stable)...'
     RUSTDOCFLAGS='-D warnings' cargo +stable doc --document-private-items --no-deps
+
+    print_header 'Building documentation (nightly)...'
+    RUSTDOCFLAGS='-D warnings' cargo +nightly doc --document-private-items --no-deps
 }
 
 lint() {
