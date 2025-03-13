@@ -38,6 +38,17 @@ jobs:
       - name: Lint (clippy)
         run: ./ci.sh lint
 
+  build_nostd:
+    name: Build (nostd)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv6m-none-eabi
+      - name: Build (nostd)
+        run: ./ci.sh build_nostd
+
   build:
     name: Build
     runs-on: ubuntu-latest
