@@ -1,3 +1,5 @@
+# Pair
+
 Safe API for generic self-referential pairs of owner and dependent.
 
 You define how to construct a dependent type from a reference to an owning type,
