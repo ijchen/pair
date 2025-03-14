@@ -4,7 +4,7 @@
 [![GitHub](https://img.shields.io/badge/Source-ijchen/pair-FFD639?labelColor=555555&logo=github)](https://github.com/ijchen/pair)
 [![crates.io](https://img.shields.io/crates/v/pair?logo=rust)](https://crates.io/crates/pair)
 [![docs.rs](https://img.shields.io/docsrs/pair?logo=docs.rs)](https://docs.rs/pair)
-![License](https://img.shields.io/crates/l/pair)
+[![License](https://img.shields.io/crates/l/pair)](#)
 
 Safe API for generic self-referential pairs of owner and dependent.
 
