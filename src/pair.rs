@@ -541,7 +541,7 @@ where
 // problems if sharing a reference to either the owner or the dependent across
 // multiple threads could cause problems (since references to both are made
 // accessible through references to the `Pair`).
-unsafe impl<O: Owner> Sync for Pair<O>
+unsafe impl<O: Owner + ?Sized> Sync for Pair<O>
 where
     O: Sync,
     for<'any> <O as HasDependent<'any>>::Dependent: Sync,
