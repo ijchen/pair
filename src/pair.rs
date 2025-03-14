@@ -500,11 +500,6 @@ impl<O: Owner<Error = Infallible> + ?Sized> Pair<O> {
 // drop of the Pair<O>. As far as I know, this is the only concern surrounding
 // dropck not understanding the semantics of Pair, and cannot cause unsoundness
 // for the reasons described above.
-//
-// TODO(ichen): Dig into the above and determine more concretely whether or not
-// this could be a problem, even theoretically. This may require having more
-// formally defined language semantics first, like a memory model and more
-// general information about what unsafe code can and cannot assume.
 impl<O: Owner + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
         // Drop the dependent `Box<<O as HasDependent<'_>>::Dependent>`
