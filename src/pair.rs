@@ -18,6 +18,34 @@ use crate::{HasDependent, Owner, drop_guard::DropGuard};
 /// Conceptually, the pair itself has ownership over the owner `O`, the owner is
 /// immutably borrowed by the dependent for the lifetime of the pair, and the
 /// dependent is owned by the pair and valid for the pair's lifetime.
+///
+/// # Constructors
+///
+/// There are many different constructors for `Pair`, each serving a different
+/// use case. There are three relevant factors to consider when deciding which
+/// constructor to use:
+///
+/// 1. Can [`make_dependent`](Owner::make_dependent) fail (return [`Err`])?
+/// 2. Does `make_dependent` require additional context?
+/// 3. Is your owner already stored in a [`Box`]?
+///
+/// The simplest constructor, which you should use if you answered "no" to all
+/// of the above questions, is [`Pair::new`]. It takes an `O: Owner`, and gives
+/// you a `Pair<O>` - doesn't get much easier than that!
+///
+/// If your `make_dependent` can fail (meaning [`Owner::Error`] is not
+/// [`Infallible`]), you should use one of the `try_*` constructors.
+///
+/// If your `make_dependent` requires additional context (meaning
+/// [`Owner::Context`] is not [`()`](prim@unit)), you should use one of the
+/// `*_with_context` constructors.
+///
+/// If your owner is already stored in a `Box`, you should use one of the
+/// `*_from_box` constructors.
+///
+/// Every combination of these is supported, up to the most powerful (and least
+/// ergonomic) [`Pair::try_new_from_box_with_context`]. You should use the
+/// simplest constructor you can for your implementation of `Owner`.
 pub struct Pair<O: Owner + ?Sized> {
     // Derived from a Box<O>
     // Immutably borrowed by `self.dependent` from construction until drop
@@ -56,14 +84,8 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you already have a [`Box`]ed owner, consider
-    /// [`Pair::try_new_from_box_with_context`] to avoid redundant reallocation.
-    ///
-    /// If you don't need to provide any context, consider the convenience
-    /// constructor [`Pair::try_new`], which doesn't require a context.
-    ///
-    /// If this construction can't fail, consider the convenience constructor
-    /// [`Pair::new_with_context`], which returns `Self` directly.
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     ///
     /// # Errors
     /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
@@ -79,15 +101,8 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you have an unboxed `O` and only box it for this function, consider
-    /// the convenience constructor [`Pair::try_new_with_context`], which boxes
-    /// the owner for you.
-    ///
-    /// If you don't need to provide any context, consider the convenience
-    /// constructor [`Pair::try_new_from_box`], which doesn't require a context.
-    ///
-    /// If this construction can't fail, consider the convenience constructor
-    /// [`Pair::new_from_box_with_context`], which returns `Self` directly.
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     ///
     /// # Errors
     /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
@@ -362,15 +377,8 @@ impl<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + ?Sized> Pair<O
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you already have a [`Box`]ed owner, consider [`Pair::new_from_box`]
-    /// to avoid redundant reallocation.
-    ///
-    /// If you need to provide some additional arguments/context to this
-    /// constructor, consider [`Pair::new_with_context`], which allows passing
-    /// in additional data.
-    ///
-    /// If this construction can fail, consider [`Pair::try_new`], which returns
-    /// a [`Result`].
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     pub fn new(owner: O) -> Self
     where
         O: Sized,
@@ -381,16 +389,8 @@ impl<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + ?Sized> Pair<O
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you have an unboxed `O` and only box it for this function, consider
-    /// the convenience constructor [`Pair::new`], which boxes the owner for
-    /// you.
-    ///
-    /// If you need to provide some additional arguments/context to this
-    /// constructor, consider [`Pair::new_from_box_with_context`], which allows
-    /// passing in additional data.
-    ///
-    /// If this construction can fail, consider [`Pair::try_new_from_box`],
-    /// which returns a [`Result`].
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     pub fn new_from_box(owner: Box<O>) -> Self {
         Self::new_from_box_with_context(owner, ())
     }
@@ -400,15 +400,8 @@ impl<O: for<'any> Owner<Context<'any> = ()> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you already have a [`Box`]ed owner, consider
-    /// [`Pair::try_new_from_box`] to avoid redundant reallocation.
-    ///
-    /// If you need to provide some additional arguments/context to this
-    /// constructor, consider [`Pair::try_new_with_context`], which allows
-    /// passing in additional data.
-    ///
-    /// If this construction can't fail, consider the convenience constructor
-    /// [`Pair::new`], which returns `Self` directly.
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     ///
     /// # Errors
     /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
@@ -423,16 +416,8 @@ impl<O: for<'any> Owner<Context<'any> = ()> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you have an unboxed `O` and only box it for this function, consider
-    /// the convenience constructor [`Pair::try_new`], which boxes the owner for
-    /// you.
-    ///
-    /// If you need to provide some additional arguments/context to this
-    /// constructor, consider [`Pair::try_new_from_box_with_context`], which
-    /// allows passing in additional data.
-    ///
-    /// If this construction can't fail, consider the convenience constructor
-    /// [`Pair::new_from_box`], which returns `Self` directly.
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     ///
     /// # Errors
     /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
@@ -446,14 +431,8 @@ impl<O: Owner<Error = Infallible> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you already have a [`Box`]ed owner, consider
-    /// [`Pair::new_from_box_with_context`] to avoid redundant reallocation.
-    ///
-    /// If you don't need to provide any context, consider the convenience
-    /// constructor [`Pair::new`], which doesn't require a context.
-    ///
-    /// If this construction can fail, consider [`Pair::try_new_with_context`],
-    /// which returns a [`Result`].
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     pub fn new_with_context(owner: O, context: O::Context<'_>) -> Self
     where
         O: Sized,
@@ -465,15 +444,8 @@ impl<O: Owner<Error = Infallible> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
-    /// If you have an unboxed `O` and only box it for this function, consider
-    /// the convenience constructor [`Pair::new_with_context`], which boxes the
-    /// owner for you.
-    ///
-    /// If you don't need to provide any context, consider the convenience
-    /// constructor [`Pair::new_from_box`], which doesn't require a context.
-    ///
-    /// If this construction can fail, consider
-    /// [`Pair::try_new_from_box_with_context`], which returns a [`Result`].
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     pub fn new_from_box_with_context(owner: Box<O>, context: O::Context<'_>) -> Self {
         let Ok(pair) = Self::try_new_from_box_with_context(owner, context);
         pair
