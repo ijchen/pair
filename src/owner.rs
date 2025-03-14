@@ -46,7 +46,7 @@ pub trait Owner: for<'any> HasDependent<'any> {
     /// the event of an error.
     ///
     /// If `make_dependent` can't fail, this should be set to
-    /// [`Infallible`](std::convert::Infallible).
+    /// [`Infallible`](core::convert::Infallible).
     //
     // TODO(ichen): default this to core::convert::Infallible (or preferably !)
     // when associated type defaults are stabilized

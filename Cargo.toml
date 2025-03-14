@@ -34,20 +34,6 @@ loom = "0.7.2"
 
 # # # # # # # # # # # # # # # # # # # #
 #                                     #
-#              FEATURES               #
-#                                     #
-# # # # # # # # # # # # # # # # # # # #
-
-[features]
-default = ["std"]
-
-# The `std` feature (enabled by default) enables usage of the standard library
-# within pair. Without the standard library, pair cannot handle panics as
-# gracefully.
-std = []
-
-# # # # # # # # # # # # # # # # # # # #
-#                                     #
 #                LINTS                #
 #                                     #
 # # # # # # # # # # # # # # # # # # # #

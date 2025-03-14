@@ -7,14 +7,11 @@
 #![cfg_attr(any(doc, test), doc = include_str!("../README.md"))]
 #![no_std]
 
-#[cfg(not(feature = "std"))]
 extern crate alloc;
-#[cfg(feature = "std")]
-extern crate std;
 
+mod drop_guard;
 mod owner;
 mod pair;
-mod panicking;
 
 pub use owner::{HasDependent, Owner};
 pub use pair::Pair;

@@ -37,7 +37,7 @@ impl Owner for PanicOnMakeDependent {
 }
 
 #[test]
-fn make_dependent_panic_handled_std_only() {
+fn make_dependent_panic_handled() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let owner_drop_called2 = Rc::clone(&owner_drop_called);
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| {
@@ -48,46 +48,6 @@ fn make_dependent_panic_handled_std_only() {
     .unwrap();
 
     assert_eq!(payload, MyPayload(7));
-    assert!(*owner_drop_called.borrow());
-}
-
-// make_dependent panics and owner drop panics
-struct PanicOnMakeDependentAndOwnerDrop(Rc<RefCell<bool>>);
-impl Drop for PanicOnMakeDependentAndOwnerDrop {
-    fn drop(&mut self) {
-        *self.0.borrow_mut() = true;
-        panic!("lol");
-    }
-}
-
-impl HasDependent<'_> for PanicOnMakeDependentAndOwnerDrop {
-    type Dependent = ();
-}
-
-impl Owner for PanicOnMakeDependentAndOwnerDrop {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
-        panic_any(MyPayload(42));
-    }
-}
-
-#[test]
-fn make_dependent_and_owner_drop_panic_handled_std_only() {
-    let owner_drop_called = Rc::new(RefCell::new(false));
-    let owner_drop_called2 = Rc::clone(&owner_drop_called);
-    let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| {
-        Pair::new(PanicOnMakeDependentAndOwnerDrop(owner_drop_called2));
-    }))
-    .unwrap_err()
-    .downcast()
-    .unwrap();
-
-    assert_eq!(payload, MyPayload(42));
     assert!(*owner_drop_called.borrow());
 }
 
@@ -123,7 +83,7 @@ impl Owner for PanicOnDepDropIntoOwner {
 }
 
 #[test]
-fn dependent_drop_panic_handled_in_into_owner_std_only() {
+fn dependent_drop_panic_handled_in_into_owner() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let pair = Pair::new(PanicOnDepDropIntoOwner(Rc::clone(&owner_drop_called)));
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| pair.into_owner()))
@@ -132,53 +92,6 @@ fn dependent_drop_panic_handled_in_into_owner_std_only() {
         .unwrap();
 
     assert_eq!(payload, MyPayload(11));
-    assert!(*owner_drop_called.borrow());
-}
-
-// dependent drop panics and owner drop panics in into_owner
-#[derive(Debug)]
-struct PanicOnDepAndOwnerDropIntoOwner(Rc<RefCell<bool>>);
-impl Drop for PanicOnDepAndOwnerDropIntoOwner {
-    fn drop(&mut self) {
-        *self.0.borrow_mut() = true;
-        panic!("ruh roh, raggy");
-    }
-}
-
-struct PanicOnDepAndOwnerDropIntoOwnerDep;
-impl Drop for PanicOnDepAndOwnerDropIntoOwnerDep {
-    fn drop(&mut self) {
-        panic_any(MyPayload(1));
-    }
-}
-impl HasDependent<'_> for PanicOnDepAndOwnerDropIntoOwner {
-    type Dependent = PanicOnDepAndOwnerDropIntoOwnerDep;
-}
-
-impl Owner for PanicOnDepAndOwnerDropIntoOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
-        Ok(PanicOnDepAndOwnerDropIntoOwnerDep)
-    }
-}
-
-#[test]
-fn dependent_and_owner_drop_panic_handled_in_into_owner_std_only() {
-    let owner_drop_called = Rc::new(RefCell::new(false));
-    let pair = Pair::new(PanicOnDepAndOwnerDropIntoOwner(Rc::clone(
-        &owner_drop_called,
-    )));
-    let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| pair.into_owner()))
-        .unwrap_err()
-        .downcast()
-        .unwrap();
-
-    assert_eq!(payload, MyPayload(1));
     assert!(*owner_drop_called.borrow());
 }
 
@@ -214,7 +127,7 @@ impl Owner for PanicOnDepDropPairDrop {
 }
 
 #[test]
-fn dependent_drop_panic_handled_in_pair_drop_std_only() {
+fn dependent_drop_panic_handled_in_pair_drop() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let pair = Pair::new(PanicOnDepDropPairDrop(Rc::clone(&owner_drop_called)));
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| drop(pair)))
@@ -223,52 +136,5 @@ fn dependent_drop_panic_handled_in_pair_drop_std_only() {
         .unwrap();
 
     assert_eq!(payload, MyPayload(3));
-    assert!(*owner_drop_called.borrow());
-}
-
-// dependent drop panics and owner drop panics in into_owner
-#[derive(Debug)]
-struct PanicOnDepAndOwnerDropPairDrop(Rc<RefCell<bool>>);
-impl Drop for PanicOnDepAndOwnerDropPairDrop {
-    fn drop(&mut self) {
-        *self.0.borrow_mut() = true;
-        panic!("ruh roh, raggy");
-    }
-}
-
-struct PanicOnDepAndOwnerDropPairDropDep;
-impl Drop for PanicOnDepAndOwnerDropPairDropDep {
-    fn drop(&mut self) {
-        panic_any(MyPayload(5));
-    }
-}
-impl HasDependent<'_> for PanicOnDepAndOwnerDropPairDrop {
-    type Dependent = PanicOnDepAndOwnerDropPairDropDep;
-}
-
-impl Owner for PanicOnDepAndOwnerDropPairDrop {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
-        Ok(PanicOnDepAndOwnerDropPairDropDep)
-    }
-}
-
-#[test]
-fn dependent_and_owner_drop_panic_handled_in_pair_drop_std_only() {
-    let owner_drop_called = Rc::new(RefCell::new(false));
-    let pair = Pair::new(PanicOnDepAndOwnerDropPairDrop(Rc::clone(
-        &owner_drop_called,
-    )));
-    let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| drop(pair)))
-        .unwrap_err()
-        .downcast()
-        .unwrap();
-
-    assert_eq!(payload, MyPayload(5));
     assert!(*owner_drop_called.borrow());
 }

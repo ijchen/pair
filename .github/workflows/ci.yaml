@@ -94,35 +94,13 @@ jobs:
       - name: Tests (leak sanitizer)
         run: ./ci.sh run_tests_leak_sanitizer
 
-  run_tests_miri_default_features:
-    name: Tests (MIRI, default features)
+  run_tests_miri:
+    name: Tests (MIRI)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri
-      - name: Tests (MIRI, default features)
-        run: ./ci.sh run_tests_miri_default_features
-
-  run_tests_miri_no_features:
-    name: Tests (MIRI, no features)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: miri
-      - name: Tests (MIRI, no features)
-        run: ./ci.sh run_tests_miri_no_features
-
-  run_tests_miri_all_features:
-    name: Tests (MIRI, all features)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: miri
-      - name: Tests (MIRI, all features)
-        run: ./ci.sh run_tests_miri_all_features
+      - name: Tests (MIRI)
+        run: ./ci.sh run_tests_miri
