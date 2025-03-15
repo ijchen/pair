@@ -1,6 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 use std::convert::Infallible;
 
 #[derive(PartialEq)]
@@ -25,10 +25,7 @@ impl Owner for MultiPartOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(MultiPartDependent {
             string: &self.field1,
             int: &self.field2[0],

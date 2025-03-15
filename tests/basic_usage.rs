@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 #[derive(Debug, PartialEq)]
 struct Buff(String);
@@ -15,10 +15,7 @@ impl Owner for Buff {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(self.0.split_whitespace().collect())
     }
 }

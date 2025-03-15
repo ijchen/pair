@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 #[derive(Debug)]
 struct BuffFallible(String);
@@ -15,10 +15,7 @@ impl Owner for BuffFallible {
     type Context<'a> = ();
     type Error = String;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         let parts: Vec<_> = self.0.split_whitespace().collect();
 
         if parts.is_empty() {
@@ -64,7 +61,7 @@ impl Owner for BuffWithContext {
     fn make_dependent(
         &self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    ) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(self.0.split(context).collect())
     }
 }
@@ -95,7 +92,7 @@ impl Owner for BuffFallibleWithContext {
     fn make_dependent(
         &self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    ) -> Result<Dependent<'_, Self>, Self::Error> {
         let parts: Vec<_> = self.0.split(context).collect();
 
         if parts.len() > 1 {

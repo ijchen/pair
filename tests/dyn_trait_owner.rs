@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 trait MyTrait {
     fn get(&self) -> &i32;
@@ -23,10 +23,7 @@ impl Owner for dyn MyTrait {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(self.get())
     }
 }

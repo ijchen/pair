@@ -17,7 +17,7 @@ impl Owner for NotSendOrSync {
     fn make_dependent<'owner>(
         &'owner self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Error> {
+    ) -> Result<Dependent<'owner, Self>, Self::Error> {
         unimplemented!()
     }
 }

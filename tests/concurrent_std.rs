@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex, RwLock, mpsc};
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 // A simple owner type for testing thread safety
 #[derive(Debug)]
@@ -27,10 +27,7 @@ impl Owner for Buff {
     type Context<'a> = ();
     type Error = std::convert::Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(parse(self))
     }
 }

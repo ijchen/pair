@@ -23,7 +23,7 @@ in time.
 
 A typical use case might look something like this:
 ```rust
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 // Let's say you have some buffer type that contains a string
 #[derive(Debug)]
@@ -57,10 +57,7 @@ impl Owner for MyBuffer {
     type Context<'a> = (); // We don't need any extra args to `make_dependent`
     type Error = std::convert::Infallible; // Our example parsing can't fail
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as pair::HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, _: ()) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(parse(self))
     }
 }

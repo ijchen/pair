@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 struct ContraOwner;
 
@@ -13,10 +13,7 @@ impl Owner for ContraOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(|_| {})
     }
 }

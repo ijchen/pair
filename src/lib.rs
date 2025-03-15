@@ -13,5 +13,5 @@ mod drop_guard;
 mod owner;
 mod pair;
 
-pub use owner::{HasDependent, Owner};
+pub use owner::{Dependent, HasDependent, Owner};
 pub use pair::Pair;

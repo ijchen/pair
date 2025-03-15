@@ -1,6 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 use std::cell::{Cell, RefCell};
 use std::convert::Infallible;
 
@@ -17,10 +17,7 @@ impl Owner for InteriorMutableOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(&self.value)
     }
 }
@@ -62,10 +59,7 @@ impl Owner for RegularOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(InteriorMutableDependent {
             value_cell: Cell::new(self.value),
             original_ref: &self.value,
@@ -102,10 +96,7 @@ impl Owner for BothInteriorMutableOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(BothInteriorMutableDependent {
             owner_ref: &self.value,
             local_value: Cell::new(*self.value.borrow()),

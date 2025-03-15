@@ -19,6 +19,10 @@ pub trait HasDependent<'owner, ForImpliedBound: Sealed = Bounds<&'owner Self>> {
     type Dependent;
 }
 
+/// A type alias for the [`Dependent`](HasDependent::Dependent) of some
+/// [`Owner`] with a specific lifetime `'owner`.
+pub type Dependent<'owner, O> = <O as HasDependent<'owner>>::Dependent;
+
 #[expect(
     clippy::missing_errors_doc,
     reason = "failure modes are specific to the trait's implementation"
@@ -58,7 +62,7 @@ pub trait Owner: for<'any> HasDependent<'any> {
     fn make_dependent<'owner>(
         &'owner self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'owner>>::Dependent, Self::Error>;
+    ) -> Result<Dependent<'owner, Self>, Self::Error>;
 }
 
 /// Used to prevent implementors of [`HasDependent`] from overriding the

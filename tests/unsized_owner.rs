@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 #[derive(Debug)]
 struct Buff<T: ?Sized>(T);
@@ -21,10 +21,7 @@ impl Owner for Buff<[u8]> {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         let start = usize::min(1, self.0.len());
         let end = self.0.len().saturating_sub(1);
         Ok((&self.0[start..end], self.0.len()))

@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 #[derive(Debug, PartialEq, Eq)]
 struct MyPayload(u8);
@@ -28,10 +28,7 @@ impl Owner for PanicOnMakeDependent {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         panic_any(MyPayload(7));
     }
 }
@@ -74,10 +71,7 @@ impl Owner for PanicOnDepDropIntoOwner {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(PanicOnDepDropIntoOwnerDep)
     }
 }
@@ -118,10 +112,7 @@ impl Owner for PanicOnDepDropPairDrop {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(PanicOnDepDropPairDropDep)
     }
 }

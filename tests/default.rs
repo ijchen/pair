@@ -1,6 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 use std::{convert::Infallible, fmt::Debug};
 
 #[derive(Default, Debug, PartialEq)]
@@ -14,10 +14,7 @@ impl<T> Owner for DefaultOwner<T> {
     type Context<'a> = ();
     type Error = Infallible;
 
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(&self.0)
     }
 }

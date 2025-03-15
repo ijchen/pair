@@ -18,7 +18,7 @@ impl Owner for Buff {
     fn make_dependent(
         &self,
         (): Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    ) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(self.0.split_whitespace().collect())
     }
 }

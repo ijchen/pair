@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, convert::Infallible, fmt::Debug};
 
-use pair::{HasDependent, Owner};
+use pair::{Dependent, HasDependent, Owner};
 
 mod real {
     pub use pair::Pair;
@@ -11,17 +11,17 @@ mod real {
 mod fake {
     use std::fmt::Debug;
 
-    use pair::{HasDependent, Owner};
+    use pair::{Dependent, Owner};
 
     #[derive(Debug)]
     pub struct Pair<'a, O: Owner>
     where
-        <O as HasDependent<'a>>::Dependent: Debug,
+        Dependent<'a, O>: Debug,
     {
         #[expect(dead_code, reason = "we actually care about the derived Debug")]
         pub owner: O,
         #[expect(dead_code, reason = "we actually care about the derived Debug")]
-        pub dependent: <O as HasDependent<'a>>::Dependent,
+        pub dependent: Dependent<'a, O>,
     }
 }
 
@@ -32,7 +32,7 @@ mod fake {
 fn debugs_match<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + Clone + Debug>(
     owner: O,
 ) where
-    for<'any> <O as HasDependent<'any>>::Dependent: Debug,
+    for<'any> Dependent<'any, O>: Debug,
 {
     let Ok(dependent) = owner.make_dependent(());
     let pair_real = real::Pair::new(owner.clone());
@@ -90,7 +90,7 @@ macro_rules! debug_tests {
             fn make_dependent(
                 &$self_kw,
                 (): Self::Context<'_>,
-            ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+            ) -> Result<Dependent<'_, Self>, Self::Error> {
                 Ok($dep_expr)
             }
         }

@@ -2,7 +2,7 @@
 
 use std::{cell::RefCell, convert::Infallible, rc::Rc};
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Dependent, HasDependent, Owner, Pair};
 
 #[derive(Debug)]
 struct OnDrop<T> {
@@ -35,7 +35,7 @@ impl<T> Owner for OnDrop<T> {
     fn make_dependent(
         &self,
         context: Self::Context<'_>,
-    ) -> Result<<Self as HasDependent<'_>>::Dependent, Self::Error> {
+    ) -> Result<Dependent<'_, Self>, Self::Error> {
         Ok(OnDropDep {
             value: context.0,
             f: context.1,

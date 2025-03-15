@@ -4,10 +4,9 @@ use core::{convert::Infallible, fmt::Debug, marker::PhantomData, mem::ManuallyDr
 
 use alloc::boxed::Box;
 
-use crate::{HasDependent, Owner, drop_guard::DropGuard};
+use crate::{Dependent, Owner, drop_guard::DropGuard};
 
-/// A self-referential pair containing both some [`Owner`] and its
-/// [`Dependent`](HasDependent::Dependent).
+/// A self-referential pair containing both some [`Owner`] and its [`Dependent`].
 ///
 /// The owner must be provided to construct a [`Pair`], and the dependent is
 /// immediately created (borrowing from the owner). Both are stored together in
@@ -46,12 +45,14 @@ use crate::{HasDependent, Owner, drop_guard::DropGuard};
 /// Every combination of these is supported, up to the most powerful (and least
 /// ergonomic) [`Pair::try_new_from_box_with_context`]. You should use the
 /// simplest constructor you can for your implementation of `Owner`.
+///
+/// [`Dependent`]: crate::HasDependent::Dependent
 pub struct Pair<O: Owner + ?Sized> {
     // Derived from a Box<O>
     // Immutably borrowed by `self.dependent` from construction until drop
     owner: NonNull<O>,
 
-    // Type-erased Box<<O as HasDependent<'self.owner>>::Dependent>
+    // Type-erased Box<Dependent<'owner, O>>
     dependent: NonNull<()>,
 
     // Need invariance over O - if we were covariant or contravariant, two
@@ -209,7 +210,7 @@ impl<O: Owner + ?Sized> Pair<O> {
         // Type-erase dependent so its inexpressible self-referential lifetime
         // goes away (we know that it's borrowing self.owner immutably from
         // construction (now) until drop)
-        let dependent: NonNull<<O as HasDependent<'_>>::Dependent> = non_null_from_box(dependent);
+        let dependent: NonNull<Dependent<'_, O>> = non_null_from_box(dependent);
         let dependent: NonNull<()> = dependent.cast();
 
         Ok(Self {
@@ -234,33 +235,31 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// Calls the given closure, providing shared access to the dependent, and
     /// returns the value computed by the closure.
     ///
-    /// The closure must be able to work with a
-    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
-    /// lives at least as long as the borrow of `self`. This is important
-    /// because the dependent may be invariant over its lifetime, and the
-    /// correct lifetime (lasting from the construction of `self` until drop) is
-    /// inexpressible. For dependent types covariant over their lifetime, the
-    /// closure may simply return the reference to the dependent, which may then
-    /// be used as if this function directly returned a reference.
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary
+    /// lifetime that lives at least as long as the borrow of `self`. This is
+    /// important because the dependent may be invariant over its lifetime, and
+    /// the correct lifetime (lasting from the construction of `self` until
+    /// drop) is inexpressible. For dependent types covariant over their
+    /// lifetime, the closure may simply return the reference to the dependent,
+    /// which may then be used as if this function directly returned a
+    /// reference.
+    ///
+    /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_dependent<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
-        F: for<'any> FnOnce(&'self_borrow <O as HasDependent<'any>>::Dependent) -> T,
+        F: for<'any> FnOnce(&'self_borrow Dependent<'_, O>) -> T,
     {
         // SAFETY: `self.dependent` was originally converted from a valid
-        // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
-        // NonNull<()>. As such, it inherited the alignment and validity
-        // guarantees of Box (for an <O as HasDependent<'_>>::Dependent) - and
-        // neither our code nor any of our exposed APIs could have invalidated
-        // those since construction. Additionally, because we have a shared
-        // reference to self, we know that the value behind the pointer is
-        // currently either not borrowed at all, or in a shared borrow state
-        // (no exclusive borrows, no other code assuming unique ownership).
-        // Here, we only either create the first shared borrow, or add another.
-        let dependent: &<O as HasDependent<'_>>::Dependent = unsafe {
-            self.dependent
-                .cast::<<O as HasDependent<'_>>::Dependent>()
-                .as_ref()
-        };
+        // Box<Dependent<'_, O>>, and type-erased to a NonNull<()>. As such, it
+        // inherited the alignment and validity guarantees of Box (for a
+        // Dependent<'_, O>) - and neither our code nor any of our exposed APIs
+        // could have invalidated those since construction. Additionally,
+        // because we have a shared reference to self, we know that the value
+        // behind the pointer is currently either not borrowed at all, or in a
+        // shared borrow state (no exclusive borrows, no other code assuming
+        // unique ownership). Here, we only either create the first shared
+        // borrow, or add another.
+        let dependent = unsafe { self.dependent.cast::<Dependent<'_, O>>().as_ref() };
 
         f(dependent)
     }
@@ -268,15 +267,16 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// Calls the given closure, providing exclusive access to the dependent,
     /// and returns the value computed by the closure.
     ///
-    /// The closure must be able to work with a
-    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
-    /// lives at least as long as the borrow of `self`. This is important
-    /// because mutable references are invariant over their type `T`, and the
-    /// exact T here (a `Dependent` with a very specific lifetime lasting from
-    /// the construction of `self` until drop) is inexpressible.
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary
+    /// lifetime that lives at least as long as the borrow of `self`. This is
+    /// important because mutable references are invariant over their type `T`,
+    /// and the exact T here (a `Dependent` with a very specific lifetime
+    /// lasting from the construction of `self` until drop) is inexpressible.
+    ///
+    /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_dependent_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
-        F: for<'any> FnOnce(&'self_borrow mut <O as HasDependent<'any>>::Dependent) -> T,
+        F: for<'any> FnOnce(&'self_borrow mut Dependent<'_, O>) -> T,
     {
         self.with_both_mut(|_, dependent| f(dependent))
     }
@@ -284,16 +284,15 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// Calls the given closure, providing shared access to both the owner and
     /// the dependent, and returns the value computed by the closure.
     ///
-    /// The closure must be able to work with a
-    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
-    /// lives at least as long as the borrow of `self`. See the documentation of
-    /// [`with_dependent`](Pair::with_dependent) for more information on this.
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary
+    /// lifetime that lives at least as long as the borrow of `self`. See the
+    /// documentation of [`with_dependent`](Pair::with_dependent) for more
+    /// information on this.
+    ///
+    /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_both<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
-        F: for<'any> FnOnce(
-            &'self_borrow O,
-            &'self_borrow <O as HasDependent<'any>>::Dependent,
-        ) -> T,
+        F: for<'any> FnOnce(&'self_borrow O, &'self_borrow Dependent<'_, O>) -> T,
     {
         self.with_dependent(|dependent| f(self.owner(), dependent))
     }
@@ -302,34 +301,28 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// exclusive access to the dependent, and returns the value computed by the
     /// closure.
     ///
-    /// The closure must be able to work with a
-    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
-    /// lives at least as long as the borrow of `self`. See the documentation of
-    /// [`with_dependent_mut`](Pair::with_dependent_mut) for more information on
-    /// this.
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary
+    /// lifetime that lives at least as long as the borrow of `self`. See the
+    /// documentation of [`with_dependent_mut`](Pair::with_dependent_mut) for
+    /// more information on this.
+    ///
+    /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_both_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
-        F: for<'any> FnOnce(
-            &'self_borrow O,
-            &'self_borrow mut <O as HasDependent<'any>>::Dependent,
-        ) -> T,
+        F: for<'any> FnOnce(&'self_borrow O, &'self_borrow mut Dependent<'_, O>) -> T,
     {
         let owner: &O = self.owner();
 
         // SAFETY: `self.dependent` was originally converted from a valid
-        // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
-        // NonNull<()>. As such, it inherited the alignment and validity
-        // guarantees of Box (for an <O as HasDependent<'_>>::Dependent) - and
-        // neither our code nor any of our exposed APIs could have invalidated
-        // those since construction. Additionally, because we have an exclusive
-        // reference to self (and Pair::owner(..) doesn't borrow the dependent),
-        // we know that the value behind the pointer is currently not borrowed
-        // at all, and can't be until our exclusive borrow of `self` expires.
-        let dependent: &mut <O as HasDependent<'_>>::Dependent = unsafe {
-            self.dependent
-                .cast::<<O as HasDependent<'_>>::Dependent>()
-                .as_mut()
-        };
+        // Box<Dependent<'_, O>>, and type-erased to a NonNull<()>. As such, it
+        // inherited the alignment and validity guarantees of Box (for a
+        // Dependent<'_, O>) - and neither our code nor any of our exposed APIs
+        // could have invalidated those since construction. Additionally,
+        // because we have an exclusive reference to self (and Pair::owner(..)
+        // doesn't borrow the dependent), we know that the value behind the
+        // pointer is currently not borrowed at all, and can't be until our
+        // exclusive borrow of `self` expires.
+        let dependent = unsafe { self.dependent.cast::<Dependent<'_, O>>().as_mut() };
 
         f(owner, dependent)
     }
@@ -352,15 +345,9 @@ impl<O: Owner + ?Sized> Pair<O> {
         // SAFETY: `this.dependent` was originally created from a Box, and never
         // invalidated since then. Because we took ownership of `self`, we know
         // there are no outstanding borrows to the dependent. Therefore,
-        // reconstructing the original Box<<O as HasDependent<'_>>::Dependent>
-        // is okay.
-        let dependent: Box<<O as HasDependent<'_>>::Dependent> = unsafe {
-            Box::from_raw(
-                this.dependent
-                    .cast::<<O as HasDependent<'_>>::Dependent>()
-                    .as_ptr(),
-            )
-        };
+        // reconstructing the original Box<Dependent<'_, O>> is okay.
+        let dependent: Box<Dependent<'_, O>> =
+            unsafe { Box::from_raw(this.dependent.cast::<Dependent<'_, O>>().as_ptr()) };
 
         // We're about to drop the dependent - if it panics, we want to be able
         // to drop the boxed owner before unwinding the rest of the stack to
@@ -512,19 +499,14 @@ impl<O: Owner<Error = Infallible> + ?Sized> Pair<O> {
 // for the reasons described above.
 impl<O: Owner + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
-        // Drop the dependent `Box<<O as HasDependent<'_>>::Dependent>`
+        // Drop the dependent `Box<Dependent<'_, O>>`
 
         // SAFETY: `self.dependent` was originally created from a Box, and never
         // invalidated since then. Because we are in drop, we know there are no
         // outstanding borrows to the dependent. Therefore, reconstructing the
-        // original Box<<O as HasDependent<'_>>::Dependent> is okay.
-        let dependent = unsafe {
-            Box::from_raw(
-                self.dependent
-                    .cast::<<O as HasDependent<'_>>::Dependent>()
-                    .as_ptr(),
-            )
-        };
+        // original Box<Dependent<'_, O>> is okay.
+        let dependent =
+            unsafe { Box::from_raw(self.dependent.cast::<Dependent<'_, O>>().as_ptr()) };
 
         // We're about to drop the dependent - if it panics, we want to be able
         // to drop the boxed owner before unwinding the rest of the stack to
@@ -576,7 +558,7 @@ impl<O: Owner + ?Sized> Drop for Pair<O> {
 unsafe impl<O: Owner + ?Sized> Send for Pair<O>
 where
     O: Send,
-    for<'any> <O as HasDependent<'any>>::Dependent: Send,
+    for<'any> Dependent<'any, O>: Send,
 {
 }
 
@@ -588,13 +570,13 @@ where
 unsafe impl<O: Owner + ?Sized> Sync for Pair<O>
 where
     O: Sync,
-    for<'any> <O as HasDependent<'any>>::Dependent: Sync,
+    for<'any> Dependent<'any, O>: Sync,
 {
 }
 
 impl<O: Owner + Debug + ?Sized> Debug for Pair<O>
 where
-    for<'any> <O as HasDependent<'any>>::Dependent: Debug,
+    for<'any> Dependent<'any, O>: Debug,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.with_dependent(|dependent| {
