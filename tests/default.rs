@@ -25,7 +25,7 @@ impl<T> Owner for DefaultOwner<T> {
 fn test_default<T: Default + PartialEq + Debug>() {
     let pair: Pair<DefaultOwner<T>> = Pair::default();
 
-    assert_eq!(pair.get_owner().0, T::default());
+    assert_eq!(pair.owner().0, T::default());
     pair.with_dependent(|dep| {
         assert_eq!(dep, &&T::default());
     });

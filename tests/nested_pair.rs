@@ -69,12 +69,12 @@ fn test_pair_owning_pair() {
         assert_eq!(*outer_dep.value_ref, 100);
 
         // Access the inner pair's owner and dependent
-        assert_eq!(outer_dep.inner_pair_ref.get_owner().0, 42);
+        assert_eq!(outer_dep.inner_pair_ref.owner().0, 42);
         assert_eq!(outer_dep.inner_pair_ref.with_dependent(|dep| dep), &&42);
     });
 
     let PairOwner { value, inner_pair } = outer_pair.into_owner();
     assert_eq!(value, 100);
-    assert_eq!(inner_pair.get_owner().0, 42);
+    assert_eq!(inner_pair.owner().0, 42);
     assert_eq!(inner_pair.with_dependent(|dep| dep), &&42);
 }

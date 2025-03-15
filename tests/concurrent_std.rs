@@ -43,7 +43,7 @@ fn pair_ownership_transfer() {
     let pair = Pair::new(Buff(String::from("this is a test")));
 
     let t1 = std::thread::spawn(move || {
-        assert_eq!(pair.get_owner().0, "this is a test");
+        assert_eq!(pair.owner().0, "this is a test");
         assert_eq!(
             pair.with_dependent(|parsed| parsed).tokens,
             ["this", "is", "a", "test"]
@@ -54,7 +54,7 @@ fn pair_ownership_transfer() {
     let t2 = std::thread::spawn(move || {
         let received_pair = rx.recv().unwrap();
 
-        assert_eq!(received_pair.get_owner().0, "this is a test");
+        assert_eq!(received_pair.owner().0, "this is a test");
         assert_eq!(
             received_pair.with_dependent(|parsed| parsed).tokens,
             ["this", "is", "a", "test"]
@@ -66,7 +66,7 @@ fn pair_ownership_transfer() {
     t1.join().unwrap();
     let received_pair = t2.join().unwrap();
 
-    assert_eq!(received_pair.get_owner().0, "this is a test");
+    assert_eq!(received_pair.owner().0, "this is a test");
     assert_eq!(
         received_pair.with_dependent(|parsed| parsed).tokens,
         ["this", "is", "a", "test"]
@@ -80,7 +80,7 @@ fn pair_arc_sharing() {
 
     let pair1 = Arc::clone(&pair);
     let t1 = std::thread::spawn(move || {
-        assert_eq!(pair1.get_owner().0, "arc sharing test");
+        assert_eq!(pair1.owner().0, "arc sharing test");
         assert_eq!(
             pair1.with_dependent(|parsed| parsed).tokens,
             ["arc", "sharing", "test"]
@@ -89,7 +89,7 @@ fn pair_arc_sharing() {
 
     let pair2 = Arc::clone(&pair);
     let t2 = std::thread::spawn(move || {
-        assert_eq!(pair2.get_owner().0, "arc sharing test");
+        assert_eq!(pair2.owner().0, "arc sharing test");
         assert_eq!(
             pair2.with_dependent(|parsed| parsed).tokens,
             ["arc", "sharing", "test"]

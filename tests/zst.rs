@@ -31,7 +31,7 @@ impl Owner for OneZstOwner {
 fn test_1zst_owner() {
     let pair = Pair::new(OneZstOwner);
 
-    assert_eq!(size_of_val(pair.get_owner()), 0);
+    assert_eq!(size_of_val(pair.owner()), 0);
     assert_eq!(*pair.with_dependent(|dep| dep), NonZstDependent(42));
 }
 
@@ -63,7 +63,7 @@ impl Owner for Non1ZstOwner {
 fn test_1zst_dependent() {
     let pair = Pair::new(Non1ZstOwner(123));
 
-    assert_eq!(*pair.get_owner(), Non1ZstOwner(123));
+    assert_eq!(*pair.owner(), Non1ZstOwner(123));
     assert_eq!(size_of_val(pair.with_dependent(|dep| dep)), 0);
 }
 
@@ -90,7 +90,7 @@ impl Owner for Both1ZstOwner {
 #[test]
 fn test_both_1zst() {
     let pair = Pair::new(Both1ZstOwner);
-    assert_eq!(size_of_val(pair.get_owner()), 0);
+    assert_eq!(size_of_val(pair.owner()), 0);
     assert_eq!(size_of_val(pair.with_dependent(|dep| dep)), 0);
 }
 
@@ -121,7 +121,7 @@ impl Owner for BigZstOwner {
 fn test_bigzst_owner() {
     let pair = Pair::new(BigZstOwner([]));
 
-    assert_eq!(size_of_val(pair.get_owner()), 0);
+    assert_eq!(size_of_val(pair.owner()), 0);
     assert_eq!(*pair.with_dependent(|dep| dep), NonZstDependent(23));
 }
 
@@ -153,7 +153,7 @@ impl Owner for NonBigZstOwner {
 fn test_bigzst_dependent() {
     let pair = Pair::new(NonBigZstOwner(789));
 
-    assert_eq!(*pair.get_owner(), NonBigZstOwner(789));
+    assert_eq!(*pair.owner(), NonBigZstOwner(789));
     assert_eq!(size_of_val(pair.with_dependent(|dep| dep)), 0);
 }
 
@@ -180,6 +180,6 @@ impl Owner for BothBigZstOwner {
 #[test]
 fn test_both_bigzst() {
     let pair = Pair::new(BothBigZstOwner([]));
-    assert_eq!(size_of_val(pair.get_owner()), 0);
+    assert_eq!(size_of_val(pair.owner()), 0);
     assert_eq!(size_of_val(pair.with_dependent(|dep| dep)), 0);
 }

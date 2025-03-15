@@ -75,7 +75,7 @@ fn main() {
     });
 
     // You can obtain a reference to the owner via a reference to the pair
-    let owner: &MyBuffer = pair.get_owner();
+    let owner: &MyBuffer = pair.owner();
     assert_eq!(owner.data, "this is an example");
 
     // You can access a reference to the dependent via a reference to the pair,

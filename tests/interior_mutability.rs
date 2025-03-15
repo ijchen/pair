@@ -32,7 +32,7 @@ fn test_interior_mutable_owner() {
     });
 
     // Mutate the owner's value through the RefCell
-    *pair.get_owner().value.borrow_mut() = 100;
+    *pair.owner().value.borrow_mut() = 100;
 
     // Verify the change is visible to the dependent
     assert_eq!(*pair.with_dependent(|dep| dep).borrow(), 100);
@@ -41,7 +41,7 @@ fn test_interior_mutable_owner() {
     *pair.with_dependent(|dep| dep).borrow_mut() = 210;
 
     // Verify the change is visible to the owner
-    assert_eq!(*pair.get_owner().value.borrow(), 210);
+    assert_eq!(*pair.owner().value.borrow(), 210);
 }
 
 // Test with interior-mutable dependent
@@ -120,7 +120,7 @@ fn test_both_interior_mutable() {
     });
 
     // Mutate the owner
-    *pair.get_owner().value.borrow_mut() = 100;
+    *pair.owner().value.borrow_mut() = 100;
     assert_eq!(*pair.with_dependent(|dep| dep).owner_ref.borrow(), 100);
     assert_eq!(pair.with_dependent(|dep| dep).local_value.get(), 42);
 

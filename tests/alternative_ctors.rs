@@ -32,7 +32,7 @@ impl Owner for BuffFallible {
 #[test]
 fn fallible() {
     let pair = Pair::try_new(BuffFallible(String::from("This is a test of pair."))).unwrap();
-    assert_eq!(pair.get_owner().0, "This is a test of pair.");
+    assert_eq!(pair.owner().0, "This is a test of pair.");
 
     let (buff, err) = Pair::try_new(BuffFallible(String::from("     "))).unwrap_err();
     assert_eq!(buff.0, "     ");
@@ -42,7 +42,7 @@ fn fallible() {
         "This is a test of pair.",
     ))))
     .unwrap();
-    assert_eq!(pair.get_owner().0, "This is a test of pair.");
+    assert_eq!(pair.owner().0, "This is a test of pair.");
 
     let (buff, err) =
         Pair::try_new_from_box(Box::new(BuffFallible(String::from("     ")))).unwrap_err();
@@ -72,13 +72,13 @@ impl Owner for BuffWithContext {
 #[test]
 fn with_context() {
     let pair = Pair::new_with_context(BuffWithContext(String::from("foo, bar, bat, baz")), ", ");
-    assert_eq!(pair.get_owner().0, "foo, bar, bat, baz");
+    assert_eq!(pair.owner().0, "foo, bar, bat, baz");
 
     let pair = Pair::new_from_box_with_context(
         Box::new(BuffWithContext(String::from("foo, bar, bat, baz"))),
         ", ",
     );
-    assert_eq!(pair.get_owner().0, "foo, bar, bat, baz");
+    assert_eq!(pair.owner().0, "foo, bar, bat, baz");
 }
 
 #[derive(Debug)]
@@ -116,7 +116,7 @@ fn fallible_with_context() {
         ", ",
     )
     .unwrap();
-    assert_eq!(pair.get_owner().0, "foo, bar, bat, baz");
+    assert_eq!(pair.owner().0, "foo, bar, bat, baz");
 
     let (buff, err) = Pair::try_new_with_context(
         BuffFallibleWithContext(String::from("This is a test of pair.")),
@@ -134,7 +134,7 @@ fn fallible_with_context() {
         ", ",
     )
     .unwrap();
-    assert_eq!(pair.get_owner().0, "foo, bar, bat, baz");
+    assert_eq!(pair.owner().0, "foo, bar, bat, baz");
 
     let (buff, err) = Pair::try_new_from_box_with_context(
         Box::new(BuffFallibleWithContext(String::from(

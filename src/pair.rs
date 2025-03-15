@@ -220,7 +220,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     }
 
     /// Returns a reference to the owner.
-    pub fn get_owner(&self) -> &O {
+    pub fn owner(&self) -> &O {
         // SAFETY: `self.owner` was originally converted from a valid Box, and
         // inherited the alignment and validity guarantees of Box - and neither
         // our code nor any of our exposed APIs could have invalidated those
@@ -561,7 +561,7 @@ where
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.with_dependent(|dependent| {
             f.debug_struct("Pair")
-                .field("owner", &self.get_owner())
+                .field("owner", &self.owner())
                 .field("dependent", dependent)
                 .finish()
         })

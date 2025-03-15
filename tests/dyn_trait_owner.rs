@@ -34,7 +34,7 @@ impl Owner for dyn MyTrait {
 #[test]
 fn dyn_trait_owner() {
     let pair = Pair::new_from_box(Box::new(MyConcrete(69)) as Box<dyn MyTrait>);
-    let owner: &dyn MyTrait = pair.get_owner();
+    let owner: &dyn MyTrait = pair.owner();
     let dep: &i32 = pair.with_dependent(|dep| dep);
 
     assert_eq!(owner.get(), &69);

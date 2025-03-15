@@ -34,7 +34,7 @@ impl Owner for Buff<[u8]> {
 #[test]
 fn unsized_owner() {
     let mut pair = Pair::new_from_box(Buff::new([2, 69, 42, 5, 6, 7, 8]));
-    let owner: &Buff<[u8]> = pair.get_owner();
+    let owner: &Buff<[u8]> = pair.owner();
     let dep: &(&[u8], usize) = pair.with_dependent(|dep| dep);
 
     assert_eq!(owner.0, [2, 69, 42, 5, 6, 7, 8]);
