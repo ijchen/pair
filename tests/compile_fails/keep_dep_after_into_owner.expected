@@ -1,0 +1,6 @@
+cannot move out of `pair` because it is borrowed
+tests/compile_fails/keep_dep_after_into_owner.rs
+binding `pair` declared here
+borrow of `pair` occurs here
+move out of `pair` occurs here
+borrow later used here

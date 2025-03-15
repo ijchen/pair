@@ -1,0 +1,4 @@
+cannot be sent between threads safely
+tests/compile_fails/not_send_owner.rs
+note: required because it appears within the type `NotSend`
+required for `Pair<NotSend>` to implement `Send`

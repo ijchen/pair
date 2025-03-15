@@ -1,0 +1,5 @@
+`pair` does not live long enough
+tests/compile_fails/extract_with_dep_mut.rs
+returning this value requires that `pair` is borrowed for `'static`
+borrowed value does not live long enough
+`pair` dropped here while still borrowed
