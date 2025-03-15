@@ -314,14 +314,7 @@ impl<O: Owner + ?Sized> Pair<O> {
             &'self_borrow mut <O as HasDependent<'any>>::Dependent,
         ) -> T,
     {
-        // SAFETY: `self.owner` was originally converted from a valid Box, and
-        // inherited the alignment and validity guarantees of Box - and neither
-        // our code nor any of our exposed APIs could have invalidated those
-        // since construction. Additionally, the value behind the pointer is
-        // currently in a shared borrow state (no exclusive borrows, no other
-        // code assuming unique ownership), and will be until the Pair is
-        // dropped. Here, we only add another shared borrow.
-        let owner: &O = unsafe { self.owner.as_ref() };
+        let owner: &O = self.owner();
 
         // SAFETY: `self.dependent` was originally converted from a valid
         // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
@@ -329,9 +322,9 @@ impl<O: Owner + ?Sized> Pair<O> {
         // guarantees of Box (for an <O as HasDependent<'_>>::Dependent) - and
         // neither our code nor any of our exposed APIs could have invalidated
         // those since construction. Additionally, because we have an exclusive
-        // reference to self, we know that the value behind the pointer is
-        // currently not borrowed at all, and can't be until our exclusive
-        // borrow of `self` expires.
+        // reference to self (and Pair::owner(..) doesn't borrow the dependent),
+        // we know that the value behind the pointer is currently not borrowed
+        // at all, and can't be until our exclusive borrow of `self` expires.
         let dependent: &mut <O as HasDependent<'_>>::Dependent = unsafe {
             self.dependent
                 .cast::<<O as HasDependent<'_>>::Dependent>()
