@@ -6,7 +6,7 @@
 
 [package]
 name = "pair"
-version = "0.1.0" # ON_RELEASE: Bump version. Also, do all "ON_RELEASE" tasks
+version = "0.2.0"
 authors = ["Isaac Chen"]
 edition = "2024"
 rust-version = "1.85.0"

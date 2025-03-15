@@ -12,13 +12,6 @@ You define how to construct a dependent type from a reference to an owning type,
 and [`Pair`] will carefully bundle them together in a safe and freely movable
 self-referential struct.
 
-<!-- ON_RELEASE: for 1.0, permanantly remove this section (and this comment) -->
-# DO NOT USE THIS LIBRARY
-
-As of right now, I have absolutely no idea whether or not this API is sound. You
-should *absolutely not* use this library for anything that matters at this point
-in time.
-
 # Example Usage
 
 A typical use case might look something like this:
@@ -152,5 +145,4 @@ dual licensed as above, without any additional terms or conditions.
 docs.rs documentation links for rendered markdown (ex, on GitHub)
 These are overridden when include_str!(..)'d in lib.rs
 -->
-<!-- ON_RELEASE: the below link(s) should be updated, and this comment removed -->
-[`Pair`]: https://docs.rs/pair/__CRATE_VERSION_HERE__/pair/struct.Pair.html
+[`Pair`]: https://docs.rs/pair/0.2.0/pair/struct.Pair.html
