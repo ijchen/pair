@@ -278,6 +278,51 @@ impl<O: Owner + ?Sized> Pair<O> {
     where
         F: for<'any> FnOnce(&'self_borrow mut <O as HasDependent<'any>>::Dependent) -> T,
     {
+        self.with_both_mut(|_, dependent| f(dependent))
+    }
+
+    /// Calls the given closure, providing shared access to both the owner and
+    /// the dependent, and returns the value computed by the closure.
+    ///
+    /// The closure must be able to work with a
+    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
+    /// lives at least as long as the borrow of `self`. See the documentation of
+    /// [`with_dependent`](Pair::with_dependent) for more information on this.
+    pub fn with_both<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
+    where
+        F: for<'any> FnOnce(
+            &'self_borrow O,
+            &'self_borrow <O as HasDependent<'any>>::Dependent,
+        ) -> T,
+    {
+        self.with_dependent(|dependent| f(self.owner(), dependent))
+    }
+
+    /// Calls the given closure, providing shared access to the owner and
+    /// exclusive access to the dependent, and returns the value computed by the
+    /// closure.
+    ///
+    /// The closure must be able to work with a
+    /// [`Dependent`](HasDependent::Dependent) with any arbitrary lifetime that
+    /// lives at least as long as the borrow of `self`. See the documentation of
+    /// [`with_dependent_mut`](Pair::with_dependent_mut) for more information on
+    /// this.
+    pub fn with_both_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
+    where
+        F: for<'any> FnOnce(
+            &'self_borrow O,
+            &'self_borrow mut <O as HasDependent<'any>>::Dependent,
+        ) -> T,
+    {
+        // SAFETY: `self.owner` was originally converted from a valid Box, and
+        // inherited the alignment and validity guarantees of Box - and neither
+        // our code nor any of our exposed APIs could have invalidated those
+        // since construction. Additionally, the value behind the pointer is
+        // currently in a shared borrow state (no exclusive borrows, no other
+        // code assuming unique ownership), and will be until the Pair is
+        // dropped. Here, we only add another shared borrow.
+        let owner: &O = unsafe { self.owner.as_ref() };
+
         // SAFETY: `self.dependent` was originally converted from a valid
         // Box<<O as HasDependent<'_>>::Dependent>, and type-erased to a
         // NonNull<()>. As such, it inherited the alignment and validity
@@ -293,7 +338,7 @@ impl<O: Owner + ?Sized> Pair<O> {
                 .as_mut()
         };
 
-        f(dependent)
+        f(owner, dependent)
     }
 
     /// Consumes the [`Pair`], dropping the dependent and returning the owner.
