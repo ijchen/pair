@@ -206,7 +206,7 @@ impl<O: Owner + ?Sized> Pair<O> {
         // The call to `Box::new(..)` didn't panic - disarm our drop guard
         core::mem::forget(panic_drop_guard);
 
-        // Type-erase dependent so it's inexpressible self-referential lifetime
+        // Type-erase dependent so its inexpressible self-referential lifetime
         // goes away (we know that it's borrowing self.owner immutably from
         // construction (now) until drop)
         let dependent: NonNull<<O as HasDependent<'_>>::Dependent> = non_null_from_box(dependent);
