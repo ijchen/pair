@@ -18,7 +18,6 @@ license = "MIT OR Apache-2.0"
 keywords = ["self-referential", "data-structures", "memory", "ownership", "no_std"]
 categories = ["memory-management", "rust-patterns", "no-std", "data-structures"]
 include = ["/src/", "/Cargo.toml", "/README.md", "/CHANGELOG.md", "/LICENSE-*"]
-publish = false # ON_RELEASE: Remove publish = false
 
 # # # # # # # # # # # # # # # # # # # #
 #                                     #
