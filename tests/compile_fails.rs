@@ -48,7 +48,8 @@ fn get_compiler_err(target_dir: &Path, test_file_path: &Path) -> String {
 
     assert!(
         !output.status.success(),
-        "test compiled, but was expected not to: {test_file_path:?}"
+        "test compiled, but was expected not to: {}",
+        test_file_path.display()
     );
 
     String::from_utf8(output.stderr).expect("rustc output was not UTF-8")

@@ -247,7 +247,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_dependent<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
-        F: for<'any> FnOnce(&'self_borrow Dependent<'_, O>) -> T,
+        F: for<'any> FnOnce(&'self_borrow Dependent<'any, O>) -> T,
     {
         // SAFETY: `self.dependent` was originally converted from a valid
         // Box<Dependent<'_, O>>, and type-erased to a NonNull<()>. As such, it
@@ -276,7 +276,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_dependent_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
-        F: for<'any> FnOnce(&'self_borrow mut Dependent<'_, O>) -> T,
+        F: for<'any> FnOnce(&'self_borrow mut Dependent<'any, O>) -> T,
     {
         self.with_both_mut(|_, dependent| f(dependent))
     }
@@ -292,7 +292,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_both<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
-        F: for<'any> FnOnce(&'self_borrow O, &'self_borrow Dependent<'_, O>) -> T,
+        F: for<'any> FnOnce(&'self_borrow O, &'self_borrow Dependent<'any, O>) -> T,
     {
         self.with_dependent(|dependent| f(self.owner(), dependent))
     }
@@ -309,7 +309,7 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// [`Dependent`]: crate::HasDependent::Dependent
     pub fn with_both_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
-        F: for<'any> FnOnce(&'self_borrow O, &'self_borrow mut Dependent<'_, O>) -> T,
+        F: for<'any> FnOnce(&'self_borrow O, &'self_borrow mut Dependent<'any, O>) -> T,
     {
         let owner: &O = self.owner();
 
