@@ -7,11 +7,13 @@
 #![cfg_attr(any(doc, test), doc = include_str!("../README.md"))]
 #![no_std]
 
+// TODO(ijchen): all documentation should be considered outdated from the 0.3.0 refactor.
+
 extern crate alloc;
 
 mod drop_guard;
 mod owner;
 mod pair;
 
-pub use owner::{Dependent, HasDependent, Owner};
+pub use owner::{Dependent, Owner};
 pub use pair::Pair;

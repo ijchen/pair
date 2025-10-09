@@ -1,28 +1,21 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use std::convert::Infallible;
-
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Dependent, Owner, Pair};
 
 #[derive(Debug, PartialEq)]
 struct Buff(String);
 
-impl<'owner> HasDependent<'owner> for Buff {
+impl<'owner> Owner<'owner> for Buff {
     type Dependent = Vec<&'owner str>;
 }
 
-impl Owner for Buff {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(self.0.split_whitespace().collect())
-    }
+fn parse(buff: &Buff) -> Dependent<'_, Buff> {
+    buff.0.split_whitespace().collect()
 }
 
 #[test]
 fn basic_usage() {
-    let mut pair = Pair::new(Buff(String::from("This is a test of pair.")));
+    let mut pair = Pair::new(Buff(String::from("This is a test of pair.")), parse);
     let owner: &Buff = pair.owner();
     let dep: &Vec<&str> = pair.with_dependent(|dep| dep);
 
@@ -62,7 +55,7 @@ fn basic_usage() {
 fn basic_api_stress_test() {
     // Let's just do a bunch of the basic API functions interlaced together and
     // see what MIRI thinks
-    let mut pair = Pair::new(Buff(String::from("This is a test of pair.")));
+    let mut pair = Pair::new(Buff(String::from("This is a test of pair.")), parse);
     let owner1 = pair.owner();
     let owner2 = pair.owner();
     let owner3 = pair.owner();

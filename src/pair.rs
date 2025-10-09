@@ -47,7 +47,7 @@ use crate::{Dependent, Owner, drop_guard::DropGuard};
 /// simplest constructor you can for your implementation of `Owner`.
 ///
 /// [`Dependent`]: crate::HasDependent::Dependent
-pub struct Pair<O: Owner + ?Sized> {
+pub struct Pair<O: for<'any> Owner<'any> + ?Sized> {
     // Derived from a Box<O>
     // Immutably borrowed by `self.dependent` from construction until drop
     owner: NonNull<O>,
@@ -81,7 +81,25 @@ fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     NonNull::from(Box::leak(value))
 }
 
-impl<O: Owner + ?Sized> Pair<O> {
+impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
+    pub fn new<F>(owner: O, make_dependent: F) -> Self
+    where
+        O: Sized,
+        F: FnOnce(&O) -> Dependent<'_, O>,
+    {
+        Self::new_from_box(Box::new(owner), make_dependent)
+    }
+
+    pub fn new_from_box<F>(owner: Box<O>, make_dependent: F) -> Self
+    where
+        O: Sized,
+        F: FnOnce(&O) -> Dependent<'_, O>,
+    {
+        match Self::try_new_from_box(owner, |owner| Ok::<_, Infallible>(make_dependent(owner))) {
+            Ok(pair) => pair,
+        }
+    }
+
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
     /// be computed through [`Owner::make_dependent`] during this construction.
     ///
@@ -91,11 +109,12 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// # Errors
     /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
     /// error.
-    pub fn try_new_with_context(owner: O, context: O::Context<'_>) -> Result<Self, (O, O::Error)>
+    pub fn try_new<F, E>(owner: O, make_dependent: F) -> Result<Self, (O, E)>
     where
         O: Sized,
+        F: FnOnce(&O) -> Result<Dependent<'_, O>, E>,
     {
-        Self::try_new_from_box_with_context(Box::new(owner), context)
+        Self::try_new_from_box(Box::new(owner), make_dependent)
             .map_err(|(owner, err)| (*owner, err))
     }
 
@@ -108,10 +127,10 @@ impl<O: Owner + ?Sized> Pair<O> {
     /// # Errors
     /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
     /// error.
-    pub fn try_new_from_box_with_context(
-        owner: Box<O>,
-        context: O::Context<'_>,
-    ) -> Result<Self, (Box<O>, O::Error)> {
+    pub fn try_new_from_box<F, E>(owner: Box<O>, make_dependent: F) -> Result<Self, (Box<O>, E)>
+    where
+        F: FnOnce(&O) -> Result<Dependent<'_, O>, E>,
+    {
         // Convert owner into a NonNull, so we are no longer restricted by the
         // aliasing requirements of Box
         let owner = non_null_from_box(owner);
@@ -153,7 +172,7 @@ impl<O: Owner + ?Sized> Pair<O> {
             // marks the beginning of a shared borrow which will last until the
             // returned `Pair` is dropped (or ends immediately if make_dependent
             // panics or returns an error).
-            unsafe { owner.as_ref() }.make_dependent(context)
+            make_dependent(unsafe { owner.as_ref() })
         };
 
         // The call to `make_dependent` didn't panic - disarm our drop guard
@@ -398,85 +417,6 @@ impl<O: Owner + ?Sized> Pair<O> {
     }
 }
 
-impl<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + ?Sized> Pair<O> {
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
-    ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
-    pub fn new(owner: O) -> Self
-    where
-        O: Sized,
-    {
-        Self::new_with_context(owner, ())
-    }
-
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
-    ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
-    pub fn new_from_box(owner: Box<O>) -> Self {
-        Self::new_from_box_with_context(owner, ())
-    }
-}
-
-impl<O: for<'any> Owner<Context<'any> = ()> + ?Sized> Pair<O> {
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
-    ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
-    ///
-    /// # Errors
-    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
-    /// error.
-    pub fn try_new(owner: O) -> Result<Self, (O, O::Error)>
-    where
-        O: Sized,
-    {
-        Self::try_new_with_context(owner, ())
-    }
-
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
-    ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
-    ///
-    /// # Errors
-    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
-    /// error.
-    pub fn try_new_from_box(owner: Box<O>) -> Result<Self, (Box<O>, O::Error)> {
-        Self::try_new_from_box_with_context(owner, ())
-    }
-}
-
-impl<O: Owner<Error = Infallible> + ?Sized> Pair<O> {
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
-    ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
-    pub fn new_with_context(owner: O, context: O::Context<'_>) -> Self
-    where
-        O: Sized,
-    {
-        let Ok(pair) = Self::try_new_with_context(owner, context);
-        pair
-    }
-
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
-    ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
-    pub fn new_from_box_with_context(owner: Box<O>, context: O::Context<'_>) -> Self {
-        let Ok(pair) = Self::try_new_from_box_with_context(owner, context);
-        pair
-    }
-}
-
 /// The [`Drop`] implementation for [`Pair`] will drop both the dependent and
 /// the owner, in that order.
 //
@@ -497,7 +437,7 @@ impl<O: Owner<Error = Infallible> + ?Sized> Pair<O> {
 // drop of the Pair<O>. As far as I know, this is the only concern surrounding
 // dropck not understanding the semantics of Pair, and cannot cause unsoundness
 // for the reasons described above.
-impl<O: Owner + ?Sized> Drop for Pair<O> {
+impl<O: for<'any> Owner<'any> + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
         // Drop the dependent `Box<Dependent<'_, O>>`
 
@@ -555,7 +495,7 @@ impl<O: Owner + ?Sized> Drop for Pair<O> {
 // either the owner or the dependent to another thread could cause problems
 // (since both are semantically moved with and made accessible through the
 // `Pair`).
-unsafe impl<O: Owner + ?Sized> Send for Pair<O>
+unsafe impl<O: for<'any> Owner<'any> + ?Sized> Send for Pair<O>
 where
     O: Send,
     for<'any> Dependent<'any, O>: Send,
@@ -567,14 +507,14 @@ where
 // problems if sharing a reference to either the owner or the dependent across
 // multiple threads could cause problems (since references to both are made
 // accessible through references to the `Pair`).
-unsafe impl<O: Owner + ?Sized> Sync for Pair<O>
+unsafe impl<O: for<'any> Owner<'any> + ?Sized> Sync for Pair<O>
 where
     O: Sync,
     for<'any> Dependent<'any, O>: Sync,
 {
 }
 
-impl<O: Owner + Debug + ?Sized> Debug for Pair<O>
+impl<O: for<'any> Owner<'any> + Debug + ?Sized> Debug for Pair<O>
 where
     for<'any> Dependent<'any, O>: Debug,
 {
@@ -585,11 +525,5 @@ where
                 .field("dependent", dependent)
                 .finish()
         })
-    }
-}
-
-impl<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + Default> Default for Pair<O> {
-    fn default() -> Self {
-        Self::new(O::default())
     }
 }

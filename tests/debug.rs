@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, convert::Infallible, fmt::Debug};
 
-use pair::{Dependent, HasDependent, Owner};
+use pair::{Dependent, Owner};
 
 mod real {
     pub use pair::Pair;
@@ -14,7 +14,7 @@ mod fake {
     use pair::{Dependent, Owner};
 
     #[derive(Debug)]
-    pub struct Pair<'a, O: Owner>
+    pub struct Pair<'a, O: for<'any> Owner<'any>>
     where
         Dependent<'a, O>: Debug,
     {
@@ -29,13 +29,13 @@ mod fake {
     clippy::needless_pass_by_value,
     reason = "more ergonomic in the a later macro invocation"
 )]
-fn debugs_match<O: for<'any> Owner<Context<'any> = (), Error = Infallible> + Clone + Debug>(
-    owner: O,
-) where
+fn debugs_match<O: for<'any> Owner<'any> + Clone + Debug, F>(owner: O, make_dependent: F)
+where
     for<'any> Dependent<'any, O>: Debug,
+    F: Fn(&O) -> Dependent<'_, O>,
 {
-    let Ok(dependent) = owner.make_dependent(());
-    let pair_real = real::Pair::new(owner.clone());
+    let dependent = make_dependent(&owner);
+    let pair_real = real::Pair::new(owner.clone(), make_dependent);
     let pair_fake = fake::Pair {
         owner: owner.clone(),
         dependent,
@@ -80,22 +80,18 @@ macro_rules! debug_tests {
         #[derive(Debug, Clone)]
         $struct_or_enum $name $decl_body $(; $semicolon_exists)?
 
-        impl<$lt> HasDependent<$lt> for $name {
+        impl<'any> Owner<'any> for $name {
             #![allow(single_use_lifetimes, reason = "macros lol")]
             type Dependent = $dep_ty;
         }
-        impl Owner for $name {
-            type Context<'a> = ();
-            type Error = Infallible;
-            fn make_dependent(
-                &$self_kw,
-                (): Self::Context<'_>,
-            ) -> Result<Dependent<'_, Self>, Self::Error> {
-                Ok($dep_expr)
-            }
+        fn make_dependent(
+            &$self_kw,
+            (): Self::Context<'_>,
+        ) -> Result<Dependent<'_, Self>, Self::Error> {
+            Ok($dep_expr)
         }
         $(
-            debugs_match($owner);
+            debugs_match($owner, make_dependent);
         )+
     };
 }

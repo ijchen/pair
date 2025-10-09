@@ -1,21 +1,15 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use std::convert::Infallible;
-
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 struct ContraOwner;
 
-impl<'owner> HasDependent<'owner> for ContraOwner {
+impl<'owner> Owner<'owner> for ContraOwner {
     type Dependent = fn(&'owner u32);
 }
-impl Owner for ContraOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
 
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(|_| {})
-    }
+fn parse(_: &ContraOwner) -> fn(&u32) {
+    |_| {}
 }
 
 fn contravariant_example<'self_borrow>(pair: &'self_borrow Pair<ContraOwner>) {
@@ -37,5 +31,7 @@ fn contravariant_example<'self_borrow>(pair: &'self_borrow Pair<ContraOwner>) {
 
 #[test]
 fn examples() {
-    contravariant_example(&Pair::new(ContraOwner));
+    let foo: fn(&ContraOwner) -> fn(&u32) = parse;
+    let pair: Pair<ContraOwner> = Pair::new(ContraOwner, foo);
+    contravariant_example(&pair);
 }

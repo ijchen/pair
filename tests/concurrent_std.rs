@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex, RwLock, mpsc};
 
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 // A simple owner type for testing thread safety
 #[derive(Debug)]
@@ -19,17 +19,8 @@ fn parse(buffer: &Buff) -> Parsed<'_> {
     Parsed { tokens }
 }
 
-impl<'owner> HasDependent<'owner> for Buff {
+impl<'owner> Owner<'owner> for Buff {
     type Dependent = Parsed<'owner>;
-}
-
-impl Owner for Buff {
-    type Context<'a> = ();
-    type Error = std::convert::Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(parse(self))
-    }
 }
 
 // Test sending ownership of a Pair between threads through channels
@@ -37,7 +28,7 @@ impl Owner for Buff {
 fn pair_ownership_transfer() {
     let (tx, rx) = mpsc::channel();
 
-    let pair = Pair::new(Buff(String::from("this is a test")));
+    let pair = Pair::new(Buff(String::from("this is a test")), parse);
 
     let t1 = std::thread::spawn(move || {
         assert_eq!(pair.owner().0, "this is a test");
@@ -73,7 +64,7 @@ fn pair_ownership_transfer() {
 // Test sending and sharing a Pair via Arc<Pair<_>> across multiple threads
 #[test]
 fn pair_arc_sharing() {
-    let pair = Arc::new(Pair::new(Buff(String::from("arc sharing test"))));
+    let pair = Arc::new(Pair::new(Buff(String::from("arc sharing test")), parse));
 
     let pair1 = Arc::clone(&pair);
     let t1 = std::thread::spawn(move || {
@@ -100,9 +91,10 @@ fn pair_arc_sharing() {
 // Test concurrently accessing an Arc<Mutex<Pair>> from multiple threads
 #[test]
 fn pair_mutex_concurrent_access() {
-    let pair = Arc::new(Mutex::new(Pair::new(Buff(String::from(
-        "mutex concurrent test",
-    )))));
+    let pair = Arc::new(Mutex::new(Pair::new(
+        Buff(String::from("mutex concurrent test")),
+        parse,
+    )));
 
     let join_handles: Vec<_> = (0..4)
         .map(|_| {
@@ -142,9 +134,10 @@ fn pair_mutex_concurrent_access() {
 // Test concurrently accessing an Arc<RwLock<Pair>> from multiple threads
 #[test]
 fn pair_rwlock_concurrent_access() {
-    let pair = Arc::new(RwLock::new(Pair::new(Buff(String::from(
-        "rwlock concurrent test",
-    )))));
+    let pair = Arc::new(RwLock::new(Pair::new(
+        Buff(String::from("rwlock concurrent test")),
+        parse,
+    )));
 
     let mut join_handles: Vec<_> = Vec::new();
 
