@@ -99,22 +99,11 @@ point, the owner can safely be recovered and the `Pair` deconstructed.
 
 # Related Projects
 
-<!-- TODO: improve this table -->
-| Crate | Macro free | No `alloc` | Maintained | Soundness |
-| ----- | :--------: | :-------------: | :--------: | :-------: |
-| `pair` | ✅ | ❌ | ✅ | No known issues |
-| [`ouroboros`](https://crates.io/crates/ouroboros) | ❌ | ❌ | ✅ | ⚠️ [Unsound](https://github.com/someguynamedjosh/ouroboros/issues/122) ⚠️ |
-| [`self_cell`](https://crates.io/crates/self_cell) | ❌ | ❌ | ✅ | No known issues |
-| [`yoke`](https://crates.io/crates/yoke) | ❌ | ✅ | ✅ | ⚠️ [Unsound](https://github.com/unicode-org/icu4x/issues/2095) ⚠️ |
-| [`selfie`](https://crates.io/crates/selfie) | ✅ | ✅ | ❌ | ⚠️ [Unsound](https://github.com/prokopyl/selfie?tab=readme-ov-file#abandoned-this-crate-is-unsound-and-no-longer-maintained_) ⚠️ |
-| [`nolife`](https://crates.io/crates/nolife) | ❌ | ❌ | ✅ | No known issues |
-| [`owning_ref`](https://crates.io/crates/owning_ref) | ✅ | ✅ | ❌ | ⚠️ [Unsound](https://github.com/Kimundi/owning-ref-rs/issues/77) ⚠️ |
-| [`rental`](https://crates.io/crates/rental) | ❌ | ✅ | ❌ | ⚠️ [Unsound](https://github.com/Voultapher/self_cell?tab=readme-ov-file#related-projects) ⚠️ |
-| [`fortify`](https://crates.io/crates/fortify) | ❌ | ❌ | ✅ | No known issues |
-| [`loaned`](https://crates.io/crates/loaned) | ❌ | ✅ | ✅ | No known issues |
-| [`selfref`](https://crates.io/crates/selfref) | ❌ | ✅ | ✅ | No known issues |
-| [`self-reference`](https://crates.io/crates/self-reference) | ❌ | ✅ | ❌ | ⚠️ [Unsound](https://github.com/ArtBlnd/self-reference/issues/1) ⚠️ |
-| [`zc`](https://crates.io/crates/zc) | ❌ | ✅ | ✅ | No known issues |
+There are many ways to express self-referential data, each with their own
+tradeoffs. You might also be interested in the following projects:
+- [`ouroboros`](https://crates.io/crates/ouroboros) (be aware of [#122](https://github.com/someguynamedjosh/ouroboros/issues/122))
+- [`self_cell`](https://crates.io/crates/self_cell)
+- [`yoke`](https://crates.io/crates/yoke) (be aware of [#2095](https://github.com/unicode-org/icu4x/issues/2095))
 
 # License
 
