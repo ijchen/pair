@@ -36,8 +36,6 @@ use crate::{Dependent, Owner, drop_guard::DropGuard};
 ///
 /// Every combination of these is supported, up to the most powerful (and least ergonomic)
 /// [`Pair::try_new_from_box`]. You should use the simplest constructor you can for your use case.
-//
-// TODO: does the compiler know we hold an O, dropck wise? Ensure we have a test for this.
 pub struct Pair<O: for<'any> Owner<'any> + ?Sized> {
     // Derived from a Box<O>
     // Immutably borrowed by `self.dependent` from construction until deconstruction
