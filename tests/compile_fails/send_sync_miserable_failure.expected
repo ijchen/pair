@@ -3,3 +3,4 @@ tests/compile_fails/send_sync_miserable_failure.rs
 required for `Pair<NotSendOrSync>` to implement `Send`
 cannot be shared between threads safely
 required for `Pair<NotSendOrSync>` to implement `Sync`
+aborting due to 2 previous errors

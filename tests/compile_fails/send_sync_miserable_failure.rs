@@ -1,25 +1,11 @@
 extern crate pair;
 
-use std::convert::Infallible;
-
-use pair::{HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 struct NotSendOrSync(*mut ());
 
-impl<'owner> HasDependent<'owner> for NotSendOrSync {
+impl<'owner> Owner<'owner> for NotSendOrSync {
     type Dependent = NotSendOrSync;
-}
-
-impl Owner for NotSendOrSync {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent<'owner>(
-        &'owner self,
-        (): Self::Context<'_>,
-    ) -> Result<Dependent<'owner, Self>, Self::Error> {
-        unimplemented!()
-    }
 }
 
 fn check_send<T: Send>() {}

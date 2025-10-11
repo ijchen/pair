@@ -1,3 +1,4 @@
 cannot be shared between threads safely
 tests/compile_fails/not_sync_dep.rs
 required for `Pair<MyOwner>` to implement `Sync`
+aborting due to 1 previous error

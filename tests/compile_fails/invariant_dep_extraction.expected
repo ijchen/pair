@@ -3,3 +3,4 @@ tests/compile_fails/invariant_dep_extraction.rs
 returning this value requires that `pair` is borrowed for `'static`
 borrowed value does not live long enough
 `pair` dropped here while still borrowed
+aborting due to 1 previous error

@@ -2,9 +2,9 @@
 
 extern crate pair;
 
-use std::{convert::Infallible, marker::PhantomData};
+use std::marker::PhantomData;
 
-use pair::{HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 fn main() {}
 
@@ -12,19 +12,8 @@ struct Foo<'a>(PhantomData<&'a ()>);
 
 struct Covariant<T>(PhantomData<T>);
 
-impl<'owner> HasDependent<'owner> for Foo<'_> {
+impl<'owner> Owner<'owner> for Foo<'_> {
     type Dependent = ();
-}
-impl Owner for Foo<'_> {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(
-        &self,
-        (): Self::Context<'_>,
-    ) -> Result<Dependent<'_, Self>, Self::Error> {
-        unimplemented!()
-    }
 }
 
 fn uh_oh<'shorter, 'longer>()
@@ -42,7 +31,7 @@ where
     cov_shorter = cov_longer;
 
     // Pair<O> should *not* be covariant over O, so this should *not* be okay
-    let mut pair_shorter: Pair<Foo<'shorter>> = Pair::new(Foo(PhantomData));
-    let pair_longer: Pair<Foo<'longer>> = Pair::new(Foo(PhantomData));
+    let mut pair_shorter: Pair<Foo<'shorter>> = Pair::new(Foo(PhantomData), |_| ());
+    let pair_longer: Pair<Foo<'longer>> = Pair::new(Foo(PhantomData), |_| ());
     pair_shorter = pair_longer;
 }

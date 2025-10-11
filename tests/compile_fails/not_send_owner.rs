@@ -1,25 +1,13 @@
 extern crate pair;
 
-use std::{convert::Infallible, sync::MutexGuard};
+use std::sync::MutexGuard;
 
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Dependent, Owner, Pair};
 
 struct NotSend(MutexGuard<'static, ()>);
 
-impl<'owner> HasDependent<'owner> for NotSend {
+impl<'owner> Owner<'owner> for NotSend {
     type Dependent = ();
-}
-
-impl Owner for NotSend {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent<'owner>(
-        &'owner self,
-        (): Self::Context<'_>,
-    ) -> Result<Dependent<'owner, Self>, Self::Error> {
-        unimplemented!()
-    }
 }
 
 fn check_send<T: Send>() {}

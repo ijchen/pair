@@ -1,0 +1,312 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'pair'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "pair",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'alternative_ctors'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=alternative_ctors",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "alternative_ctors",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'basic_usage'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=basic_usage",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "basic_usage",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'compile_fails'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=compile_fails",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "compile_fails",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'concurrent_loom'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=concurrent_loom",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "concurrent_loom",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'concurrent_std'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=concurrent_std",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "concurrent_std",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'contravariance'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=contravariance",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "contravariance",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'debug'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=debug",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "debug",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'drop'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=drop",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "drop",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'dyn_trait_owner'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=dyn_trait_owner",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "dyn_trait_owner",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'interior_mutability'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=interior_mutability",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "interior_mutability",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'multiborrow'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=multiborrow",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "multiborrow",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'nested_pair'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=nested_pair",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "nested_pair",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'panic_safety'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=panic_safety",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "panic_safety",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'unsized_owner'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=unsized_owner",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "unsized_owner",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'zst'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=zst",
+                    "--package=pair"
+                ],
+                "filter": {
+                    "name": "zst",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

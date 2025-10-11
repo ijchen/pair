@@ -4,3 +4,4 @@ binding `pair` declared here
 borrow of `pair` occurs here
 move out of `pair` occurs here
 borrow later used here
+aborting due to 1 previous error

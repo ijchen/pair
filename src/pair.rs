@@ -36,14 +36,15 @@ use crate::{Dependent, Owner, drop_guard::DropGuard};
 ///
 /// Every combination of these is supported, up to the most powerful (and least ergonomic)
 /// [`Pair::try_new_from_box`]. You should use the simplest constructor you can for your use case.
-///
-/// [`Dependent`]: Owner::Dependent
+//
+// TODO: does the compiler know we hold an O, dropck wise? Ensure we have a test for this.
 pub struct Pair<O: for<'any> Owner<'any> + ?Sized> {
     // Derived from a Box<O>
-    // Immutably borrowed by `self.dependent` from construction until drop
+    // Immutably borrowed by `self.dependent` from construction until deconstruction
     owner: NonNull<O>,
 
     // Type-erased Box<Dependent<'self.owner, O>>
+    // Immutably borrowing `self.owner` from construction until deconstruction
     dependent: NonNull<()>,
 
     // Need invariance over O - if we were covariant or contravariant, two different `O`s with two
@@ -54,17 +55,16 @@ pub struct Pair<O: for<'any> Owner<'any> + ?Sized> {
     //
     // Coherence doesn't help us here, since there are types which are able to have different impls
     // of the same trait, but also have a subtype/supertype relationship (namely, `fn(&'static T)`
-    // and `for<'a> fn(&'a T)` )
-    make_invariant_in_o: PhantomData<*mut O>,
+    // and `for<'a> fn(&'a T)`)
+    make_invariant_in_o: PhantomData<fn(O) -> O>,
 }
 
 /// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned `NonNull` is the same pointer as the Box,
 /// and therefore comes with all of Box's representation guarantees:
-/// - The returned `NonNull` will be suitably aligned for T
-/// - The returned `NonNull` will point to a valid T
-/// - The returned `NonNull` was allocated with the
-///   [`Global`](alloc::alloc::Global) allocator and a valid [`Layout`](alloc::alloc::Layout) for
-///   `T`.
+/// - The returned `NonNull` will be suitably aligned for `T`
+/// - The returned `NonNull` will point to a valid `T`
+/// - The returned `NonNull` was allocated with the [`Global`](alloc::alloc::Global) allocator and
+///   a valid [`Layout`](alloc::alloc::Layout) for `T`.
 fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     // See: https://github.com/rust-lang/rust/issues/47336#issuecomment-586578713
     NonNull::from(Box::leak(value))
@@ -74,8 +74,8 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
     /// `make_dependent` during this construction.
     ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
+    /// See the "Constructors" section in the documentation of [`Pair`] for information on the
+    /// differences between constructors.
     pub fn new<F>(owner: O, make_dependent: F) -> Self
     where
         O: Sized,
@@ -87,8 +87,8 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
     /// `make_dependent` during this construction.
     ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
+    /// See the "Constructors" section in the documentation of [`Pair`] for information on the
+    /// differences between constructors.
     pub fn new_from_box<F>(owner: Box<O>, make_dependent: F) -> Self
     where
         F: FnOnce(&O) -> Dependent<'_, O>,
@@ -101,8 +101,8 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
     /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
     /// `make_dependent` during this construction.
     ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
+    /// See the "Constructors" section in the documentation of [`Pair`] for information on the
+    /// differences between constructors.
     ///
     /// # Errors
     ///
@@ -116,61 +116,56 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
             .map_err(|(owner, err)| (*owner, err))
     }
 
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
+    /// `make_dependent` during this construction.
     ///
-    /// See the "Constructors" section in the documentation of [`Pair`] for
-    /// information on the differences between constructors.
+    /// See the "Constructors" section in the documentation of [`Pair`] for information on the
+    /// differences between constructors.
     ///
     /// # Errors
-    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
-    /// error.
+    /// If `make_dependent` returns an error.
     pub fn try_new_from_box<F, E>(owner: Box<O>, make_dependent: F) -> Result<Self, (Box<O>, E)>
     where
         F: FnOnce(&O) -> Result<Dependent<'_, O>, E>,
     {
-        // Convert owner into a NonNull, so we are no longer restricted by the
-        // aliasing requirements of Box
+        // Convert owner into a NonNull, so we are no longer restricted by the aliasing requirements
+        // of Box
         let owner = non_null_from_box(owner);
 
-        // Borrow `owner` to construct `dependent`. This borrow conceptually
-        // lasts from now until drop, where we will drop `dependent` and then
-        // drop owner.
-
-        // We're about to call `make_dependent(..)` - if it panics, we want to
-        // be able to drop the boxed owner before unwinding the rest of the
-        // stack to avoid unnecessarily leaking memory (and potentially other
-        // resources).
+        // We're about to call `make_dependent(..)` - if it panics, we want to be able to drop the
+        // boxed owner before unwinding the rest of the stack to avoid unnecessarily leaking memory
+        // (and potentially other resources).
         let panic_drop_guard = DropGuard(|| {
-            // If this code is executed, it means make_dependent panicked and we
-            // never `mem::forget(..)`'d this drop guard. Recover and drop the
-            // boxed owner.
+            // If this code is executing, it means `make_dependent` panicked and we never
+            // `mem::forget(..)`'d this drop guard. Recover and drop the boxed owner.
 
-            // SAFETY: `owner` was just created from a Box earlier in
-            // `try_new_from_box_with_context`, and not invalidated since then.
-            // Because we haven't given away access to a `Self`, and the one
-            // borrow we took of the owner to pass to `make_dependent` has
-            // expired (since it panicked), we know there are no outstanding
-            // borrows to owner. Therefore, reconstructing the original Box<O>
-            // is okay.
+            // SAFETY: `owner` was just created from a Box earlier in `try_new_from_box`, and not
+            // invalidated since then. Because we haven't given away access to a `Self`, and the one
+            // borrow we took of the owner to pass to `make_dependent` has expired (since it
+            // panicked), we know there are no outstanding borrows to owner. Therefore,
+            // reconstructing the original Box<O> is okay.
             let owner: Box<O> = unsafe { Box::from_raw(owner.as_ptr()) };
 
-            // If the owner's drop *also* panics, that will be a double-panic.
-            // This will cause an abort, which is fine - drops generally
-            // shouldn't panic, and if the user *really* wants to handle this,
-            // they can check if the thread is panicking within owner's drop
+            // If the owner's drop *also* panics, that will be a double-panic. This will cause an
+            // abort, which is fine - drops generally shouldn't panic, and if the user *really*
+            // wants to handle this, they can check if the thread is panicking within owner's drop
             // before performing any operations which could panic.
             drop(owner);
         });
 
         let maybe_dependent = {
-            // SAFETY: `owner` was just converted from a valid Box, and inherits
-            // the alignment and validity guarantees of Box. Additionally, the
-            // value behind the pointer is currently not borrowed at all - this
-            // marks the beginning of a shared borrow which will last until the
-            // returned `Pair` is dropped (or ends immediately if make_dependent
+            // Borrow `owner` to construct `dependent`. This borrow conceptually lasts from now
+            // until drop, where we will drop `dependent` and then drop owner.
+            //
+            // SAFETY: `owner` was just converted from a valid Box, and inherits the alignment and
+            // validity guarantees of Box. Additionally, the value behind the pointer is currently
+            // not borrowed at all - this marks the beginning of a shared borrow which will last
+            // until the returned `Pair` is deconstructed (or ends immediately if `make_dependent`
             // panics or returns an error).
-            make_dependent(unsafe { owner.as_ref() })
+            let owner_ref = unsafe { owner.as_ref() };
+
+            // Call `make_dependent` with our borrowed owner
+            make_dependent(owner_ref)
         };
 
         // The call to `make_dependent` didn't panic - disarm our drop guard
@@ -180,117 +175,100 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         let dependent = match maybe_dependent {
             Ok(dependent) => dependent,
             Err(err) => {
-                // SAFETY: `owner` was just created from a Box earlier in this
-                // function, and not invalidated since then. Because we haven't
-                // given away access to a `Self`, and the one borrow we took of
-                // the dependent to pass to `make_dependent` has expired, we
-                // know there are no outstanding borrows to owner. Therefore,
-                // reconstructing the original Box<O> is okay.
+                // SAFETY: `owner` was just created from a Box earlier in this function, and not
+                // invalidated since then. Because we haven't given away access to a `Self`, and the
+                // one borrow we took of the dependent to pass to `make_dependent` has expired, we
+                // know there are no outstanding borrows to owner. Therefore, reconstructing the
+                // original Box<O> is okay.
                 let owner: Box<O> = unsafe { Box::from_raw(owner.as_ptr()) };
 
                 return Err((owner, err));
             }
         };
 
-        // We're about to call `Box::new(..)` - if it panics, we want to be able
-        // to drop the boxed owner before unwinding the rest of the stack to
-        // avoid unnecessarily leaking memory (and potentially other resources).
+        // We're about to call `Box::new(..)` - if it panics, we want to be able to drop the boxed
+        // owner before unwinding the rest of the stack to avoid unnecessarily leaking memory (and
+        // potentially other resources).
         let panic_drop_guard = DropGuard(|| {
-            // If this code is executed, it means `Box::new(..)` panicked and we
-            // never `mem::forget(..)`'d this drop guard. Recover and drop the
-            // boxed owner.
+            // If this code is executing, it means `Box::new(..)` panicked and we never
+            // `mem::forget(..)`'d this drop guard. Recover and drop the boxed owner.
 
-            // SAFETY: `owner` was just created from a Box earlier in
-            // `try_new_from_box_with_context`, and not invalidated since then.
-            // Because we haven't given away access to a `Self`, and the one
-            // borrow of the owner stored in the dependent has expired (since we
-            // gave ownership of the dependent to the `Box::new(..)` call that
-            // panicked), we know there are no outstanding borrows to owner.
-            // Therefore, reconstructing the original Box<O> is okay.
+            // SAFETY: `owner` was just created from a Box earlier in `try_new_from_box`, and not
+            // invalidated since then. Because we haven't given away access to a `Self`, and the one
+            // borrow of the owner stored in the dependent has expired (since we gave ownership of
+            // the dependent to the `Box::new(..)` call that panicked), we know there are no
+            // outstanding borrows to owner. Therefore, reconstructing the original Box<O> is okay.
             let owner: Box<O> = unsafe { Box::from_raw(owner.as_ptr()) };
 
-            // If the owner's drop *also* panics, that will be a double-panic.
-            // This will cause an abort, which is fine - drops generally
-            // shouldn't panic, and if the user *really* wants to handle this,
-            // they can check if the thread is panicking within owner's drop
+            // If the owner's drop *also* panics, that will be a double-panic. This will cause an
+            // abort, which is fine - drops generally shouldn't panic, and if the user *really*
+            // wants to handle this, they can check if the thread is panicking within owner's drop
             // before performing any operations which could panic.
             drop(owner);
         });
 
-        // Move `dependent` to the heap, so we can store it as a type-erased
-        // pointer.
+        // Move `dependent` to the heap, so we can store it as a type-erased pointer.
         let dependent = Box::new(dependent);
 
         // The call to `Box::new(..)` didn't panic - disarm our drop guard
         core::mem::forget(panic_drop_guard);
 
-        // Type-erase dependent so its inexpressible self-referential lifetime
-        // goes away (we know that it's borrowing self.owner immutably from
-        // construction (now) until drop)
+        // Type-erase dependent so its inexpressible self-referential lifetime goes away (we know
+        // that it's borrowing self.owner immutably from construction (now) until deconstruction)
         let dependent: NonNull<Dependent<'_, O>> = non_null_from_box(dependent);
         let dependent: NonNull<()> = dependent.cast();
 
         Ok(Self {
             owner,
             dependent,
-            prevent_covariance: PhantomData,
+            make_invariant_in_o: PhantomData,
         })
     }
 
     /// Returns a reference to the owner.
     pub fn owner(&self) -> &O {
-        // SAFETY: `self.owner` was originally converted from a valid Box, and
-        // inherited the alignment and validity guarantees of Box - and neither
-        // our code nor any of our exposed APIs could have invalidated those
-        // since construction. Additionally, the value behind the pointer is
-        // currently in a shared borrow state (no exclusive borrows, no other
-        // code assuming unique ownership), and will be until the Pair is
-        // dropped. Here, we only add another shared borrow.
+        // SAFETY: `self.owner` was originally converted from a valid Box, and inherited the
+        // alignment and validity guarantees of Box - and neither our code nor any of our exposed
+        // APIs could have invalidated those since construction. Additionally, the value behind the
+        // pointer is currently in a shared borrow state (no exclusive borrows, no other code
+        // assuming unique ownership), and will be until the Pair is deconstructed. Here, we only
+        // add another shared borrow.
         unsafe { self.owner.as_ref() }
     }
 
-    /// Calls the given closure, providing shared access to the dependent, and
-    /// returns the value computed by the closure.
+    /// Calls the given closure, providing shared access to the dependent, and returns the value
+    /// computed by the closure.
     ///
-    /// The closure must be able to work with a [`Dependent`] with any arbitrary
-    /// lifetime that lives at least as long as the borrow of `self`. This is
-    /// important because the dependent may be invariant over its lifetime, and
-    /// the correct lifetime (lasting from the construction of `self` until
-    /// drop) is inexpressible. For dependent types covariant over their
-    /// lifetime, the closure may simply return the reference to the dependent,
-    /// which may then be used as if this function directly returned a
-    /// reference.
-    ///
-    /// [`Dependent`]: crate::HasDependent::Dependent
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary lifetime that lives
+    /// at least as long as the borrow of `self`. This is important because the dependent may be
+    /// invariant over its lifetime, and the correct lifetime (lasting from the construction of
+    /// `self` until deconstruction) is inexpressible. For dependent types covariant over their
+    /// lifetime, the closure may simply return the reference to the dependent, which may then be
+    /// used as if this function directly returned a reference.
     pub fn with_dependent<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
         F: for<'any> FnOnce(&'self_borrow Dependent<'any, O>) -> T,
     {
-        // SAFETY: `self.dependent` was originally converted from a valid
-        // Box<Dependent<'_, O>>, and type-erased to a NonNull<()>. As such, it
-        // inherited the alignment and validity guarantees of Box (for a
-        // Dependent<'_, O>) - and neither our code nor any of our exposed APIs
-        // could have invalidated those since construction. Additionally,
-        // because we have a shared reference to self, we know that the value
-        // behind the pointer is currently either not borrowed at all, or in a
-        // shared borrow state (no exclusive borrows, no other code assuming
-        // unique ownership). Here, we only either create the first shared
-        // borrow, or add another.
+        // SAFETY: `self.dependent` was originally converted from a valid Box<Dependent<'_, O>>, and
+        // type-erased to a NonNull<()>. As such, it inherited the alignment and validity guarantees
+        // of Box (for a Dependent<'_, O>) - and neither our code nor any of our exposed APIs could
+        // have invalidated those since construction. Additionally, because we have a shared
+        // reference to self, we know that the value behind the pointer is currently either not
+        // borrowed at all, or in a shared borrow state (no exclusive borrows, no other code
+        // assuming unique ownership). Here, we only either create the first shared borrow, or add
+        // another.
         let dependent = unsafe { self.dependent.cast::<Dependent<'_, O>>().as_ref() };
 
         f(dependent)
     }
 
-    /// Calls the given closure, providing exclusive access to the dependent,
-    /// and returns the value computed by the closure.
+    /// Calls the given closure, providing exclusive access to the dependent, and returns the value
+    /// computed by the closure.
     ///
-    /// The closure must be able to work with a [`Dependent`] with any arbitrary
-    /// lifetime that lives at least as long as the borrow of `self`. This is
-    /// important because mutable references are invariant over their type `T`,
-    /// and the exact T here (a `Dependent` with a very specific lifetime
-    /// lasting from the construction of `self` until drop) is inexpressible.
-    ///
-    /// [`Dependent`]: crate::HasDependent::Dependent
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary lifetime that lives
+    /// at least as long as the borrow of `self`. This is important because mutable references are
+    /// invariant over their type `T`, and the exact T here (a `Dependent` with a very specific
+    /// lifetime lasting from the construction of `self` until deconstruction) is inexpressible.
     pub fn with_dependent_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
         F: for<'any> FnOnce(&'self_borrow mut Dependent<'any, O>) -> T,
@@ -298,15 +276,12 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         self.with_both_mut(|_, dependent| f(dependent))
     }
 
-    /// Calls the given closure, providing shared access to both the owner and
-    /// the dependent, and returns the value computed by the closure.
+    /// Calls the given closure, providing shared access to both the owner and the dependent, and
+    /// returns the value computed by the closure.
     ///
-    /// The closure must be able to work with a [`Dependent`] with any arbitrary
-    /// lifetime that lives at least as long as the borrow of `self`. See the
-    /// documentation of [`with_dependent`](Pair::with_dependent) for more
-    /// information on this.
-    ///
-    /// [`Dependent`]: crate::HasDependent::Dependent
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary lifetime that lives
+    /// at least as long as the borrow of `self`. See the documentation of
+    /// [`with_dependent`](Pair::with_dependent) for more information on this.
     pub fn with_both<'self_borrow, F, T>(&'self_borrow self, f: F) -> T
     where
         F: for<'any> FnOnce(&'self_borrow O, &'self_borrow Dependent<'any, O>) -> T,
@@ -314,30 +289,24 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         self.with_dependent(|dependent| f(self.owner(), dependent))
     }
 
-    /// Calls the given closure, providing shared access to the owner and
-    /// exclusive access to the dependent, and returns the value computed by the
-    /// closure.
+    /// Calls the given closure, providing shared access to the owner and exclusive access to the
+    /// dependent, and returns the value computed by the closure.
     ///
-    /// The closure must be able to work with a [`Dependent`] with any arbitrary
-    /// lifetime that lives at least as long as the borrow of `self`. See the
-    /// documentation of [`with_dependent_mut`](Pair::with_dependent_mut) for
-    /// more information on this.
-    ///
-    /// [`Dependent`]: crate::HasDependent::Dependent
+    /// The closure must be able to work with a [`Dependent`] with any arbitrary lifetime that lives
+    /// at least as long as the borrow of `self`. See the documentation of
+    /// [`with_dependent_mut`](Pair::with_dependent_mut) for more information on this.
     pub fn with_both_mut<'self_borrow, F, T>(&'self_borrow mut self, f: F) -> T
     where
         F: for<'any> FnOnce(&'self_borrow O, &'self_borrow mut Dependent<'any, O>) -> T,
     {
         let owner: &O = self.owner();
 
-        // SAFETY: `self.dependent` was originally converted from a valid
-        // Box<Dependent<'_, O>>, and type-erased to a NonNull<()>. As such, it
-        // inherited the alignment and validity guarantees of Box (for a
-        // Dependent<'_, O>) - and neither our code nor any of our exposed APIs
-        // could have invalidated those since construction. Additionally,
-        // because we have an exclusive reference to self (and Pair::owner(..)
-        // doesn't borrow the dependent), we know that the value behind the
-        // pointer is currently not borrowed at all, and can't be until our
+        // SAFETY: `self.dependent` was originally converted from a valid Box<Dependent<'_, O>>, and
+        // type-erased to a NonNull<()>. As such, it inherited the alignment and validity guarantees
+        // of Box (for a Dependent<'_, O>) - and neither our code nor any of our exposed APIs could
+        // have invalidated those since construction. Additionally, because we have an exclusive
+        // reference to self (and Pair::owner(..) doesn't borrow the dependent), we know that the
+        // value behind the pointer is currently not borrowed at all, and can't be until our
         // exclusive borrow of `self` expires.
         let dependent = unsafe { self.dependent.cast::<Dependent<'_, O>>().as_mut() };
 
@@ -346,46 +315,41 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
 
     /// Consumes the [`Pair`], dropping the dependent and returning the owner.
     ///
-    /// If you don't need the returned owner in a [`Box`], consider the
-    /// convenience method [`Pair::into_owner`], which moves the owner out of
-    /// the box for you.
+    /// If you don't need the returned owner in a [`Box`], consider the convenience method
+    /// [`Pair::into_owner`], which moves the owner out of the box for you.
     pub fn into_boxed_owner(self) -> Box<O> {
-        // Prevent dropping `self` at the end of this scope - otherwise, the
-        // Pair drop implementation would attempt to drop the owner and
-        // dependent again, which would be... not good (unsound).
+        // Prevent dropping `self` at the end of this scope - otherwise, the Pair drop
+        // implementation would attempt to drop the owner and dependent again, which would be...
+        // not good (unsound).
         //
-        // It's important that we do this before calling the dependent's drop,
-        // since a panic in that drop would otherwise cause a double free when
-        // we attempt to drop the dependent again when dropping `self`.
+        // It's important that we do this before calling the dependent's drop, since a panic in that
+        // drop would otherwise cause a double free when we attempt to drop the dependent again when
+        // dropping `self`.
         let this = ManuallyDrop::new(self);
 
-        // SAFETY: `this.dependent` was originally created from a Box, and never
-        // invalidated since then. Because we took ownership of `self`, we know
-        // there are no outstanding borrows to the dependent. Therefore,
-        // reconstructing the original Box<Dependent<'_, O>> is okay.
+        // SAFETY: `this.dependent` was originally created from a Box, and never invalidated since
+        // then. Because we took ownership of `self`, we know there are no outstanding borrows to
+        // the dependent. Therefore, reconstructing the original Box<Dependent<'_, O>> is okay.
         let dependent: Box<Dependent<'_, O>> =
             unsafe { Box::from_raw(this.dependent.cast::<Dependent<'_, O>>().as_ptr()) };
 
-        // We're about to drop the dependent - if it panics, we want to be able
-        // to drop the boxed owner before unwinding the rest of the stack to
-        // avoid unnecessarily leaking memory (and potentially other resources).
+        // We're about to drop the dependent - if it panics, we want to be able to drop the boxed
+        // owner before unwinding the rest of the stack to avoid unnecessarily leaking memory (and
+        // potentially other resources).
         let panic_drop_guard = DropGuard(|| {
-            // If this code is executed, it means the dependent's drop panicked
-            // and we never `mem::forget(..)`'d this drop guard. Recover and
-            // drop the boxed owner.
+            // If this code is executing, it means the dependent's drop panicked and we never
+            // `mem::forget(..)`'d this drop guard. Recover and drop the boxed owner.
 
-            // SAFETY: `this.owner` was originally created from a Box, and never
-            // invalidated since then. Because we took ownership of `self`, and
-            // we just dropped the dependent (well, the drop panicked - but its
-            // borrow of the owner has certainly expired), we know there are no
-            // outstanding borrows to owner. Therefore, reconstructing the
-            // original Box<O> is okay.
+            // SAFETY: `this.owner` was originally created from a Box, and never invalidated since
+            // then. Because we took ownership of `self`, and we just dropped the dependent (well,
+            // the drop panicked - but its borrow of the owner has certainly expired), we know there
+            // are no outstanding borrows to owner. Therefore, reconstructing the original Box<O> is
+            // okay.
             let owner: Box<O> = unsafe { Box::from_raw(this.owner.as_ptr()) };
 
-            // If the owner's drop *also* panics, that will be a double-panic.
-            // This will cause an abort, which is fine - drops generally
-            // shouldn't panic, and if the user *really* wants to handle this,
-            // they can check if the thread is panicking within owner's drop
+            // If the owner's drop *also* panics, that will be a double-panic. This will cause an
+            // abort, which is fine - drops generally shouldn't panic, and if the user *really*
+            // wants to handle this, they can check if the thread is panicking within owner's drop
             // before performing any operations which could panic.
             drop(owner);
         });
@@ -396,10 +360,9 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         // The dependent's drop didn't panic - disarm our drop guard
         core::mem::forget(panic_drop_guard);
 
-        // SAFETY: `this.owner` was originally created from a Box, and never
-        // invalidated since then. Because we took ownership of `self`, and we
-        // just dropped the dependent, we know there are no outstanding borrows
-        // to owner. Therefore, reconstructing the original Box<O> is okay.
+        // SAFETY: `this.owner` was originally created from a Box, and never invalidated since then.
+        // Because we took ownership of `self`, and we just dropped the dependent, we know there are
+        // no outstanding borrows to owner. Therefore, reconstructing the original Box<O> is okay.
         unsafe { Box::from_raw(this.owner.as_ptr()) }
     }
 
@@ -415,57 +378,49 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
     }
 }
 
-/// The [`Drop`] implementation for [`Pair`] will drop both the dependent and
-/// the owner, in that order.
+/// The [`Drop`] implementation for [`Pair`] will drop both the dependent and the owner, in that
+/// order.
 //
-// NOTE(ichen): There are definitely some weird dropck things going on, but I do
-// not believe they can lead to any unsoundness. Because of the signature of
-// Pair, dropck thinks we access an O and do nothing with O::Dependent. It's
-// right about O - we don't access it directly, but the dependent (which we do
-// drop) might access an O in its drop. Unfortunately, the compiler is wrong
-// about O::Dependent. It doesn't see any indication of O::Dependent in the
-// signature for Pair (because we've type erased it), so dropck has no idea that
-// we will drop an O::Dependent in our drop.
+// NOTE(ichen): There are definitely some weird dropck things going on, but I do not believe they
+// can lead to any unsoundness. Because of the signature of Pair, dropck thinks we access an O and
+// do nothing with O::Dependent. It's right about O - we don't access it directly, but the dependent
+// (which we do drop) might access an O in its drop. Unfortunately, the compiler is wrong about
+// O::Dependent. It doesn't see any indication of O::Dependent in the signature for Pair (because
+// we've type erased it), so dropck has no idea that we will drop an O::Dependent in our drop.
 //
-// This sounds like a problem, but I believe it is not. The signature of Owner
-// and HasDependent enforce that the dependent only borrows the owner, or things
-// which the owner also borrows. Additionally, the compiler will ensure that
-// anything the owner borrows are valid until the pair's drop. Therefore, the
-// dependent cannot contain any references which will be invalidated before the
-// drop of the Pair<O>. As far as I know, this is the only concern surrounding
-// dropck not understanding the semantics of Pair, and cannot cause unsoundness
-// for the reasons described above.
+// This sounds like a problem, but I believe it is not. The signature of Owner and HasDependent
+// enforce that the dependent only borrows the owner, or things which the owner also borrows.
+// Additionally, the compiler will ensure that anything the owner borrows are valid until the pair's
+// drop. Therefore, the dependent cannot contain any references which will be invalidated before the
+// drop of the Pair<O>. As far as I know, this is the only concern surrounding dropck not
+// understanding the semantics of Pair, and cannot cause unsoundness for the reasons described
+// above.
 impl<O: for<'any> Owner<'any> + ?Sized> Drop for Pair<O> {
     fn drop(&mut self) {
         // Drop the dependent `Box<Dependent<'_, O>>`
 
-        // SAFETY: `self.dependent` was originally created from a Box, and never
-        // invalidated since then. Because we are in drop, we know there are no
-        // outstanding borrows to the dependent. Therefore, reconstructing the
-        // original Box<Dependent<'_, O>> is okay.
+        // SAFETY: `self.dependent` was originally created from a Box, and never invalidated since
+        // then. Because we are in drop, we know there are no outstanding borrows to the dependent.
+        // Therefore, reconstructing the original Box<Dependent<'_, O>> is okay.
         let dependent =
             unsafe { Box::from_raw(self.dependent.cast::<Dependent<'_, O>>().as_ptr()) };
 
-        // We're about to drop the dependent - if it panics, we want to be able
-        // to drop the boxed owner before unwinding the rest of the stack to
-        // avoid unnecessarily leaking memory (and potentially other resources).
+        // We're about to drop the dependent - if it panics, we want to be able to drop the boxed
+        // owner before unwinding the rest of the stack to avoid unnecessarily leaking memory (and
+        // potentially other resources).
         let panic_drop_guard = DropGuard(|| {
-            // If this code is executed, it means the dependent's drop panicked
-            // and we never `mem::forget(..)`'d this drop guard. Recover and
-            // drop the boxed owner.
+            // If this code is executing, it means the dependent's drop panicked and we never
+            // `mem::forget(..)`'d this drop guard. Recover and drop the boxed owner.
 
-            // SAFETY: `self.owner` was originally created from a Box, and never
-            // invalidated since then. Because we are in drop, and we just
-            // dropped the dependent (well, the drop panicked - but its borrow
-            // of the owner has certainly expired), we know there are no
-            // outstanding borrows to owner. Therefore, reconstructing the
-            // original Box<O> is okay.
+            // SAFETY: `self.owner` was originally created from a Box, and never invalidated since
+            // then. Because we are in drop, and we just dropped the dependent (well, the drop
+            // panicked - but its borrow of the owner has certainly expired), we know there are no
+            // outstanding borrows to owner. Therefore, reconstructing the original Box<O> is okay.
             let owner: Box<O> = unsafe { Box::from_raw(self.owner.as_ptr()) };
 
-            // If the owner's drop *also* panics, that will be a double-panic.
-            // This will cause an abort, which is fine - drops generally
-            // shouldn't panic, and if the user *really* wants to handle this,
-            // they can check if the thread is panicking within owner's drop
+            // If the owner's drop *also* panics, that will be a double-panic. This will cause an
+            // abort, which is fine - drops generally shouldn't panic, and if the user *really*
+            // wants to handle this, they can check if the thread is panicking within owner's drop
             // before performing any operations which could panic.
             drop(owner);
         });
@@ -478,21 +433,19 @@ impl<O: for<'any> Owner<'any> + ?Sized> Drop for Pair<O> {
 
         // Drop the owner `Box<O>`
 
-        // SAFETY: `self.owner` was originally created from a Box, and never
-        // invalidated since then. Because we are in drop, and we just dropped
-        // the dependent, we know there are no outstanding borrows to owner.
-        // Therefore, reconstructing the original Box<O> is okay.
+        // SAFETY: `self.owner` was originally created from a Box, and never invalidated since then.
+        // Because we are in drop, and we just dropped the dependent, we know there are no
+        // outstanding borrows to owner. Therefore, reconstructing the original Box<O> is okay.
         let owner = unsafe { Box::from_raw(self.owner.as_ptr()) };
 
         drop(owner);
     }
 }
 
-// SAFETY: `Pair` has no special thread-related invariants or requirements, so
-// sending a `Pair` to another thread could only cause problems if sending
-// either the owner or the dependent to another thread could cause problems
-// (since both are semantically moved with and made accessible through the
-// `Pair`).
+// SAFETY: `Pair` has no special thread-related invariants or requirements, so sending a `Pair` to
+// another thread could only cause problems if sending either the owner or the dependent to another
+// thread could cause problems (since both are semantically moved with and made accessible through
+// the `Pair`).
 unsafe impl<O: for<'any> Owner<'any> + ?Sized> Send for Pair<O>
 where
     O: Send,
@@ -500,11 +453,10 @@ where
 {
 }
 
-// SAFETY: `Pair` has no special thread-related invariants or requirements, so
-// sharing a reference to a `Pair` across multiple threads could only cause
-// problems if sharing a reference to either the owner or the dependent across
-// multiple threads could cause problems (since references to both are made
-// accessible through references to the `Pair`).
+// SAFETY: `Pair` has no special thread-related invariants or requirements, so sharing a reference
+// to a `Pair` across multiple threads could only cause problems if sharing a reference to either
+// the owner or the dependent across multiple threads could cause problems (since references to
+// both are made accessible through references to the `Pair`).
 unsafe impl<O: for<'any> Owner<'any> + ?Sized> Sync for Pair<O>
 where
     O: Sync,

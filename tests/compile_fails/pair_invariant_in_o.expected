@@ -1,7 +1,8 @@
 lifetime may not live long enough
-tests/compile_fails/pair_not_covariant.rs
+tests/compile_fails/pair_invariant_in_o.rs
 lifetime `'longer` defined here
 lifetime `'shorter` defined here
 type annotation requires that `'shorter` must outlive `'longer`
 requirement occurs because of the type `Pair<Foo<'_>>`, which makes the generic argument `Foo<'_>` invariant
 the struct `Pair<O>` is invariant over the parameter `O`
+aborting due to 1 previous error

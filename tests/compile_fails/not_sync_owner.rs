@@ -1,25 +1,13 @@
 extern crate pair;
 
-use std::{cell::UnsafeCell, convert::Infallible};
+use std::cell::UnsafeCell;
 
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Dependent, Owner, Pair};
 
 struct NotSync(UnsafeCell<()>);
 
-impl<'owner> HasDependent<'owner> for NotSync {
+impl<'owner> Owner<'owner> for NotSync {
     type Dependent = ();
-}
-
-impl Owner for NotSync {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent<'owner>(
-        &'owner self,
-        (): Self::Context<'_>,
-    ) -> Result<Dependent<'owner, Self>, Self::Error> {
-        unimplemented!()
-    }
 }
 
 fn check_send<T: Send>() {}
