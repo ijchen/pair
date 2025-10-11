@@ -2,6 +2,13 @@
 
 # Major Version 0
 
+## v0.3.0
+
+Refactored `Owner`, `HasDependent`, and `Pair`:
+- `HasDependent` trait renamed to `Owner`
+- `Owner` trait removed
+- `Pair` constructors now use a provided `FnOnce` to construct the dependent
+
 ## v0.2.0
 
 Implemented the core functionality of this crate:
