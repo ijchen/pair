@@ -8,7 +8,7 @@ impl<'owner> Owner<'owner> for ContraOwner {
     type Dependent = fn(&'owner u32);
 }
 
-fn parse(_: &ContraOwner) -> fn(&u32) {
+fn parse<'a>(_: &'a ContraOwner) -> fn(&'a u32) {
     |_| {}
 }
 
@@ -22,7 +22,7 @@ fn contravariant_example<'self_borrow>(pair: &'self_borrow Pair<ContraOwner>) {
     // covariant in 'a). But any lifetime potentially less than 'static might
     // not live as long as the body of the function pointer was allowed to
     // assume - therefore, this cannot compile:
-    // let f: &'self_borrow for<'a> fn(&'a u32) = pair.with_dependent(|f| f);
+    // let f: &'self_borrow fn(&u32) = pair.with_dependent(|f| f);
     // But this can:
     let f: &'self_borrow fn(&'static u32) = pair.with_dependent(|f| f);
 
@@ -31,7 +31,6 @@ fn contravariant_example<'self_borrow>(pair: &'self_borrow Pair<ContraOwner>) {
 
 #[test]
 fn examples() {
-    let foo: fn(&ContraOwner) -> fn(&u32) = parse;
-    let pair: Pair<ContraOwner> = Pair::new(ContraOwner, foo);
+    let pair: Pair<ContraOwner> = Pair::new(ContraOwner, parse);
     contravariant_example(&pair);
 }

@@ -1,21 +1,17 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use pair::{Dependent, HasDependent, Owner, Pair};
-use std::convert::Infallible;
+use pair::{Owner, Pair};
 
 #[derive(Debug)]
 struct SimpleOwner(i32);
 
-impl<'owner> HasDependent<'owner> for SimpleOwner {
+impl<'owner> Owner<'owner> for SimpleOwner {
     type Dependent = &'owner i32;
 }
 
-impl Owner for SimpleOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(&self.0)
+impl SimpleOwner {
+    fn make_dependent(&self) -> &i32 {
+        &self.0
     }
 }
 
@@ -32,32 +28,29 @@ struct PairOwnerDependent<'owner> {
     inner_pair_ref: &'owner Pair<SimpleOwner>,
 }
 
-impl<'owner> HasDependent<'owner> for PairOwner {
+impl<'owner> Owner<'owner> for PairOwner {
     type Dependent = PairOwnerDependent<'owner>;
 }
 
-impl Owner for PairOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(PairOwnerDependent {
+impl PairOwner {
+    fn make_dependent(&self) -> PairOwnerDependent<'_> {
+        PairOwnerDependent {
             value_ref: &self.value,
             inner_pair_ref: &self.inner_pair,
-        })
+        }
     }
 }
 
 #[test]
 fn test_pair_owning_pair() {
-    let inner_pair = Pair::new(SimpleOwner(42));
+    let inner_pair = Pair::new(SimpleOwner(42), SimpleOwner::make_dependent);
 
     let pair_owner = PairOwner {
         value: 100,
         inner_pair,
     };
 
-    let outer_pair = Pair::new(pair_owner);
+    let outer_pair = Pair::new(pair_owner, PairOwner::make_dependent);
 
     outer_pair.with_dependent(|outer_dep| {
         assert_eq!(*outer_dep.value_ref, 100);

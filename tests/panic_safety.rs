@@ -2,17 +2,17 @@
 
 use std::{
     cell::RefCell,
-    convert::Infallible,
     panic::{AssertUnwindSafe, catch_unwind, panic_any},
     rc::Rc,
 };
 
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 #[derive(Debug, PartialEq, Eq)]
 struct MyPayload(u8);
 
 // make_dependent panics
+#[derive(Debug)]
 struct PanicOnMakeDependent(Rc<RefCell<bool>>);
 impl Drop for PanicOnMakeDependent {
     fn drop(&mut self) {
@@ -20,15 +20,13 @@ impl Drop for PanicOnMakeDependent {
     }
 }
 
-impl HasDependent<'_> for PanicOnMakeDependent {
+impl Owner<'_> for PanicOnMakeDependent {
     type Dependent = ();
 }
 
-impl Owner for PanicOnMakeDependent {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
+impl PanicOnMakeDependent {
+    #[expect(clippy::unused_self, reason = "convoluted example for test")]
+    fn make_dependent(&self) {
         panic_any(MyPayload(7));
     }
 }
@@ -38,7 +36,10 @@ fn make_dependent_panic_handled() {
     let owner_drop_called = Rc::new(RefCell::new(false));
     let owner_drop_called2 = Rc::clone(&owner_drop_called);
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| {
-        Pair::new(PanicOnMakeDependent(owner_drop_called2));
+        Pair::new(
+            PanicOnMakeDependent(owner_drop_called2),
+            PanicOnMakeDependent::make_dependent,
+        )
     }))
     .unwrap_err()
     .downcast()
@@ -63,23 +64,24 @@ impl Drop for PanicOnDepDropIntoOwnerDep {
         panic_any(MyPayload(11));
     }
 }
-impl HasDependent<'_> for PanicOnDepDropIntoOwner {
+impl Owner<'_> for PanicOnDepDropIntoOwner {
     type Dependent = PanicOnDepDropIntoOwnerDep;
 }
 
-impl Owner for PanicOnDepDropIntoOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(PanicOnDepDropIntoOwnerDep)
+impl PanicOnDepDropIntoOwner {
+    #[expect(clippy::unused_self, reason = "convoluted example for test")]
+    fn make_dependent(&self) -> PanicOnDepDropIntoOwnerDep {
+        PanicOnDepDropIntoOwnerDep
     }
 }
 
 #[test]
 fn dependent_drop_panic_handled_in_into_owner() {
     let owner_drop_called = Rc::new(RefCell::new(false));
-    let pair = Pair::new(PanicOnDepDropIntoOwner(Rc::clone(&owner_drop_called)));
+    let pair = Pair::new(
+        PanicOnDepDropIntoOwner(Rc::clone(&owner_drop_called)),
+        PanicOnDepDropIntoOwner::make_dependent,
+    );
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| pair.into_owner()))
         .unwrap_err()
         .downcast()
@@ -104,23 +106,24 @@ impl Drop for PanicOnDepDropPairDropDep {
         panic_any(MyPayload(3));
     }
 }
-impl HasDependent<'_> for PanicOnDepDropPairDrop {
+impl Owner<'_> for PanicOnDepDropPairDrop {
     type Dependent = PanicOnDepDropPairDropDep;
 }
 
-impl Owner for PanicOnDepDropPairDrop {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(PanicOnDepDropPairDropDep)
+impl PanicOnDepDropPairDrop {
+    #[expect(clippy::unused_self, reason = "convoluted example for test")]
+    fn make_dependent(&self) -> PanicOnDepDropPairDropDep {
+        PanicOnDepDropPairDropDep
     }
 }
 
 #[test]
 fn dependent_drop_panic_handled_in_pair_drop() {
     let owner_drop_called = Rc::new(RefCell::new(false));
-    let pair = Pair::new(PanicOnDepDropPairDrop(Rc::clone(&owner_drop_called)));
+    let pair = Pair::new(
+        PanicOnDepDropPairDrop(Rc::clone(&owner_drop_called)),
+        PanicOnDepDropPairDrop::make_dependent,
+    );
     let payload: MyPayload = *catch_unwind(AssertUnwindSafe(|| drop(pair)))
         .unwrap_err()
         .downcast()

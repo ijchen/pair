@@ -1,8 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use std::convert::Infallible;
-
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 trait MyTrait {
     fn get(&self) -> &i32;
@@ -16,21 +14,15 @@ impl MyTrait for MyConcrete {
     }
 }
 
-impl<'owner> HasDependent<'owner> for dyn MyTrait {
+impl<'owner> Owner<'owner> for dyn MyTrait {
     type Dependent = &'owner i32;
-}
-impl Owner for dyn MyTrait {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(self.get())
-    }
 }
 
 #[test]
 fn dyn_trait_owner() {
-    let pair = Pair::new_from_box(Box::new(MyConcrete(69)) as Box<dyn MyTrait>);
+    let pair = Pair::new_from_box(Box::new(MyConcrete(69)) as Box<dyn MyTrait>, |owner| {
+        owner.get()
+    });
     let owner: &dyn MyTrait = pair.owner();
     let dep: &i32 = pair.with_dependent(|dep| dep);
 

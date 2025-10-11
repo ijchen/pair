@@ -16,7 +16,7 @@ self-referential struct.
 
 A typical use case might look something like this:
 ```rust
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Dependent, Owner, Pair};
 
 // Let's say you have some buffer type that contains a string
 #[derive(Debug)]
@@ -38,21 +38,11 @@ fn parse(buffer: &MyBuffer) -> Parsed<'_> {
 
 
 
-// You would then implement HasDependent and Owner for MyBuffer:
+// You would then implement Owner for MyBuffer:
 
 // Defines the owner/dependent relationship between MyBuffer and Parsed<'_>
-impl<'owner> HasDependent<'owner> for MyBuffer {
-    type Dependent = Parsed<'owner>;
-}
-
-// Define how to make a Parsed<'_> from a &MyBuffer
-impl Owner for MyBuffer {
-    type Context<'a> = (); // We don't need any extra args to `make_dependent`
-    type Error = std::convert::Infallible; // Our example parsing can't fail
-
-    fn make_dependent(&self, _: ()) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(parse(self))
-    }
+impl<'any> Owner<'any> for MyBuffer {
+    type Dependent = Parsed<'any>;
 }
 
 
@@ -60,9 +50,11 @@ impl Owner for MyBuffer {
 // You can now use MyBuffer in a Pair:
 fn main() {
     // A Pair can be constructed from an owner value (MyBuffer, in this example)
-    let mut pair = Pair::new(MyBuffer {
-        data: String::from("this is an example"),
-    });
+    // and a function to construct the dependent value (parse, in this example)
+    let mut pair = Pair::new(
+        MyBuffer { data: String::from("this is an example") },
+        parse,
+    );
 
     // You can obtain a reference to the owner via a reference to the pair
     let owner: &MyBuffer = pair.owner();

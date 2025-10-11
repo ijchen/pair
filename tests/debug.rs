@@ -1,6 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use std::{borrow::Cow, convert::Infallible, fmt::Debug};
+use std::{borrow::Cow, fmt::Debug};
 
 use pair::{Dependent, Owner};
 
@@ -25,10 +25,6 @@ mod fake {
     }
 }
 
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "more ergonomic in the a later macro invocation"
-)]
 fn debugs_match<O: for<'any> Owner<'any> + Clone + Debug, F>(owner: O, make_dependent: F)
 where
     for<'any> Dependent<'any, O>: Debug,
@@ -80,18 +76,17 @@ macro_rules! debug_tests {
         #[derive(Debug, Clone)]
         $struct_or_enum $name $decl_body $(; $semicolon_exists)?
 
-        impl<'any> Owner<'any> for $name {
+        impl<$lt> Owner<$lt> for $name {
             #![allow(single_use_lifetimes, reason = "macros lol")]
             type Dependent = $dep_ty;
         }
-        fn make_dependent(
-            &$self_kw,
-            (): Self::Context<'_>,
-        ) -> Result<Dependent<'_, Self>, Self::Error> {
-            Ok($dep_expr)
+        impl $name {
+            fn make_dependent(&$self_kw) -> Dependent<'_, Self> {
+                $dep_expr
+            }
         }
         $(
-            debugs_match($owner, make_dependent);
+            debugs_match($owner, $name::make_dependent);
         )+
     };
 }

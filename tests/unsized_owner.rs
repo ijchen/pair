@@ -1,8 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use std::convert::Infallible;
-
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 
 #[derive(Debug)]
 struct Buff<T: ?Sized>(T);
@@ -13,24 +11,21 @@ impl Buff<[u8]> {
     }
 }
 
-impl<'owner> HasDependent<'owner> for Buff<[u8]> {
+impl<'owner> Owner<'owner> for Buff<[u8]> {
     type Dependent = (&'owner [u8], usize);
 }
 
-impl Owner for Buff<[u8]> {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
+impl Buff<[u8]> {
+    fn make_dependent(&self) -> (&[u8], usize) {
         let start = usize::min(1, self.0.len());
         let end = self.0.len().saturating_sub(1);
-        Ok((&self.0[start..end], self.0.len()))
+        (&self.0[start..end], self.0.len())
     }
 }
 
 #[test]
 fn unsized_owner() {
-    let mut pair = Pair::new_from_box(Buff::new([2, 69, 42, 5, 6, 7, 8]));
+    let mut pair = Pair::new_from_box(Buff::new([2, 69, 42, 5, 6, 7, 8]), Buff::make_dependent);
     let owner: &Buff<[u8]> = pair.owner();
     let dep: &(&[u8], usize) = pair.with_dependent(|dep| dep);
 

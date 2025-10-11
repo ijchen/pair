@@ -1,7 +1,6 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use pair::{Dependent, HasDependent, Owner, Pair};
-use std::convert::Infallible;
+use pair::{Owner, Pair};
 
 #[derive(PartialEq)]
 struct MultiPartOwner {
@@ -17,20 +16,15 @@ struct MultiPartDependent<'a> {
     boolean: &'a bool,
 }
 
-impl<'owner> HasDependent<'owner> for MultiPartOwner {
+impl<'owner> Owner<'owner> for MultiPartOwner {
     type Dependent = MultiPartDependent<'owner>;
 }
 
-impl Owner for MultiPartOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(MultiPartDependent {
-            string: &self.field1,
-            int: &self.field2[0],
-            boolean: &self.field3,
-        })
+fn make_dependent(owner: &MultiPartOwner) -> MultiPartDependent<'_> {
+    MultiPartDependent {
+        string: &owner.field1,
+        int: &owner.field2[0],
+        boolean: &owner.field3,
     }
 }
 
@@ -45,7 +39,7 @@ fn test_multiple_borrows() {
         field4: Box::default(),
     };
 
-    let pair = Pair::new(owner);
+    let pair = Pair::new(owner, make_dependent);
 
     pair.with_dependent(|dep| {
         assert_eq!(dep.string, "Hello, world!");

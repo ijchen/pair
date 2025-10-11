@@ -8,80 +8,74 @@ use crate::{Dependent, Owner, drop_guard::DropGuard};
 
 /// A self-referential pair containing both some [`Owner`] and its [`Dependent`].
 ///
-/// The owner must be provided to construct a [`Pair`], and the dependent is
-/// immediately created (borrowing from the owner). Both are stored together in
-/// the pair, which heap-allocates the owner so that the pair itself may be
-/// moved freely without invalidating any references stored inside the
-/// dependent.
+/// Constructing a [`Pair`] requires providing both the owner and a function to create a dependent
+/// from a reference to the owner. The dependent will be created using the provided function
+/// (borrowing from the provided owner). Both the owner and dependent are stored together in the
+/// pair, which heap-allocates the owner so that the pair itself may be moved freely without
+/// invalidating any references stored inside the dependent.
 ///
-/// Conceptually, the pair itself has ownership over the owner `O`, the owner is
-/// immutably borrowed by the dependent for the lifetime of the pair, and the
-/// dependent is owned by the pair and valid for the pair's lifetime.
+/// Conceptually, the pair itself has ownership over the owner `O`, the owner is immutably borrowed
+/// by the dependent for the lifetime of the pair, and the dependent is owned by the pair and valid
+/// for the pair's lifetime.
 ///
 /// # Constructors
 ///
-/// There are many different constructors for `Pair`, each serving a different
-/// use case. There are three relevant factors to consider when deciding which
-/// constructor to use:
+/// There are a few different constructors for `Pair`, each serving a different use case. There are
+/// two relevant factors to consider when deciding which constructor to use:
 ///
-/// 1. Can [`make_dependent`](Owner::make_dependent) fail (return [`Err`])?
-/// 2. Does `make_dependent` require additional context?
-/// 3. Is your owner already stored in a [`Box`]?
+/// 1. Can constructing the dependent fail (should `make_dependent` return a [`Result`])?
+/// 2. Is your owner already stored in a [`Box`]?
 ///
-/// The simplest constructor, which you should use if you answered "no" to all
-/// of the above questions, is [`Pair::new`]. It takes an `O: Owner`, and gives
-/// you a `Pair<O>` - doesn't get much easier than that!
+/// The simplest constructor, which you should use if you answered "no" to both of the above
+/// questions, is [`Pair::new`]. It takes an `O: Owner` and a `FnOnce(&O) -> Dependent<'_>`, and
+/// gives you a `Pair<O>` - doesn't get much easier than that!
 ///
-/// If your `make_dependent` can fail (meaning [`Owner::Error`] is not
-/// [`Infallible`]), you should use one of the `try_*` constructors.
+/// If your `make_dependent` can fail, you should use one of the `try_*` constructors.
 ///
-/// If your `make_dependent` requires additional context (meaning
-/// [`Owner::Context`] is not [`()`](prim@unit)), you should use one of the
-/// `*_with_context` constructors.
+/// If your owner is already stored in a `Box`, you should use one of the `*_from_box` constructors.
 ///
-/// If your owner is already stored in a `Box`, you should use one of the
-/// `*_from_box` constructors.
+/// Every combination of these is supported, up to the most powerful (and least ergonomic)
+/// [`Pair::try_new_from_box`]. You should use the simplest constructor you can for your use case.
 ///
-/// Every combination of these is supported, up to the most powerful (and least
-/// ergonomic) [`Pair::try_new_from_box_with_context`]. You should use the
-/// simplest constructor you can for your implementation of `Owner`.
-///
-/// [`Dependent`]: crate::HasDependent::Dependent
+/// [`Dependent`]: Owner::Dependent
 pub struct Pair<O: for<'any> Owner<'any> + ?Sized> {
     // Derived from a Box<O>
     // Immutably borrowed by `self.dependent` from construction until drop
     owner: NonNull<O>,
 
-    // Type-erased Box<Dependent<'owner, O>>
+    // Type-erased Box<Dependent<'self.owner, O>>
     dependent: NonNull<()>,
 
-    // Need invariance over O - if we were covariant or contravariant, two
-    // different `O`s with two different `Owner` impls (and importantly, two
-    // different associated types in HasDependent) which have a sub/supertype
-    // relationship could be incorrectly treated as substitutable in a Pair.
-    // That would lead to effectively an unchecked transmute of each field,
-    // which would obviously be unsound.
+    // Need invariance over O - if we were covariant or contravariant, two different `O`s with two
+    // different `Owner` impls (and importantly, two different `Dependent` associated types) which
+    // have a sub/supertype relationship could be incorrectly treated as substitutable in a Pair.
+    // That would lead to effectively an unchecked transmute of the dependent, which would obviously
+    // be unsound.
     //
-    // Coherence doesn't help us here, since there are types which are able to
-    // have different impls of the same trait, but also have a subtype/supertype
-    // relationship (namely, `fn(&'static T)` and `for<'a> fn(&'a T)` )
-    prevent_covariance: PhantomData<*mut O>,
+    // Coherence doesn't help us here, since there are types which are able to have different impls
+    // of the same trait, but also have a subtype/supertype relationship (namely, `fn(&'static T)`
+    // and `for<'a> fn(&'a T)` )
+    make_invariant_in_o: PhantomData<*mut O>,
 }
 
-/// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned `NonNull` is the same
-/// pointer as the Box, and therefore comes with all of Box's representation
-/// guarantees:
+/// Creates a [`NonNull<T>`] from [`Box<T>`]. The returned `NonNull` is the same pointer as the Box,
+/// and therefore comes with all of Box's representation guarantees:
 /// - The returned `NonNull` will be suitably aligned for T
 /// - The returned `NonNull` will point to a valid T
 /// - The returned `NonNull` was allocated with the
-///   [`Global`](alloc::alloc::Global) allocator and a valid
-///   [`Layout`](alloc::alloc::Layout) for `T`.
+///   [`Global`](alloc::alloc::Global) allocator and a valid [`Layout`](alloc::alloc::Layout) for
+///   `T`.
 fn non_null_from_box<T: ?Sized>(value: Box<T>) -> NonNull<T> {
     // See: https://github.com/rust-lang/rust/issues/47336#issuecomment-586578713
     NonNull::from(Box::leak(value))
 }
 
 impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
+    /// `make_dependent` during this construction.
+    ///
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     pub fn new<F>(owner: O, make_dependent: F) -> Self
     where
         O: Sized,
@@ -90,9 +84,13 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         Self::new_from_box(Box::new(owner), make_dependent)
     }
 
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
+    /// `make_dependent` during this construction.
+    ///
+    /// See the "Constructors" section in the documentation of [`Pair`] for
+    /// information on the differences between constructors.
     pub fn new_from_box<F>(owner: Box<O>, make_dependent: F) -> Self
     where
-        O: Sized,
         F: FnOnce(&O) -> Dependent<'_, O>,
     {
         match Self::try_new_from_box(owner, |owner| Ok::<_, Infallible>(make_dependent(owner))) {
@@ -100,15 +98,15 @@ impl<O: for<'any> Owner<'any> + ?Sized> Pair<O> {
         }
     }
 
-    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will
-    /// be computed through [`Owner::make_dependent`] during this construction.
+    /// Constructs a new [`Pair`] with the given [`Owner`]. The dependent will be computed through
+    /// `make_dependent` during this construction.
     ///
     /// See the "Constructors" section in the documentation of [`Pair`] for
     /// information on the differences between constructors.
     ///
     /// # Errors
-    /// If [`<O as Owner>::make_dependent`](Owner::make_dependent) returns an
-    /// error.
+    ///
+    /// If `make_dependent` returns an error.
     pub fn try_new<F, E>(owner: O, make_dependent: F) -> Result<Self, (O, E)>
     where
         O: Sized,

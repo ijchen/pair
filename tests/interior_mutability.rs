@@ -1,32 +1,31 @@
 #![allow(missing_docs, reason = "integration test")]
 
-use pair::{Dependent, HasDependent, Owner, Pair};
+use pair::{Owner, Pair};
 use std::cell::{Cell, RefCell};
-use std::convert::Infallible;
 
 // Test with interior-mutable owner
 struct InteriorMutableOwner {
     value: RefCell<i32>,
 }
 
-impl<'owner> HasDependent<'owner> for InteriorMutableOwner {
+impl<'owner> Owner<'owner> for InteriorMutableOwner {
     type Dependent = &'owner RefCell<i32>;
 }
 
-impl Owner for InteriorMutableOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(&self.value)
+impl InteriorMutableOwner {
+    fn make_dependent(&self) -> &RefCell<i32> {
+        &self.value
     }
 }
 
 #[test]
 fn test_interior_mutable_owner() {
-    let pair = Pair::new(InteriorMutableOwner {
-        value: RefCell::new(42),
-    });
+    let pair = Pair::new(
+        InteriorMutableOwner {
+            value: RefCell::new(42),
+        },
+        InteriorMutableOwner::make_dependent,
+    );
 
     // Mutate the owner's value through the RefCell
     *pair.owner().value.borrow_mut() = 100;
@@ -51,25 +50,22 @@ struct InteriorMutableDependent<'a> {
     original_ref: &'a i32,
 }
 
-impl<'owner> HasDependent<'owner> for RegularOwner {
+impl<'owner> Owner<'owner> for RegularOwner {
     type Dependent = InteriorMutableDependent<'owner>;
 }
 
-impl Owner for RegularOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(InteriorMutableDependent {
+impl RegularOwner {
+    fn make_dependent(&self) -> InteriorMutableDependent<'_> {
+        InteriorMutableDependent {
             value_cell: Cell::new(self.value),
             original_ref: &self.value,
-        })
+        }
     }
 }
 
 #[test]
 fn test_interior_mutable_dependent() {
-    let pair = Pair::new(RegularOwner { value: 42 });
+    let pair = Pair::new(RegularOwner { value: 42 }, RegularOwner::make_dependent);
 
     // Mutate the dependent's Cell value
     pair.with_dependent(|dep| dep.value_cell.set(100));
@@ -88,27 +84,27 @@ struct BothInteriorMutableDependent<'a> {
     local_value: Cell<i32>,
 }
 
-impl<'owner> HasDependent<'owner> for BothInteriorMutableOwner {
+impl<'owner> Owner<'owner> for BothInteriorMutableOwner {
     type Dependent = BothInteriorMutableDependent<'owner>;
 }
 
-impl Owner for BothInteriorMutableOwner {
-    type Context<'a> = ();
-    type Error = Infallible;
-
-    fn make_dependent(&self, (): Self::Context<'_>) -> Result<Dependent<'_, Self>, Self::Error> {
-        Ok(BothInteriorMutableDependent {
+impl BothInteriorMutableOwner {
+    fn make_dependent(&self) -> BothInteriorMutableDependent<'_> {
+        BothInteriorMutableDependent {
             owner_ref: &self.value,
             local_value: Cell::new(*self.value.borrow()),
-        })
+        }
     }
 }
 
 #[test]
 fn test_both_interior_mutable() {
-    let pair = Pair::new(BothInteriorMutableOwner {
-        value: RefCell::new(42),
-    });
+    let pair = Pair::new(
+        BothInteriorMutableOwner {
+            value: RefCell::new(42),
+        },
+        BothInteriorMutableOwner::make_dependent,
+    );
 
     // Mutate the owner
     *pair.owner().value.borrow_mut() = 100;
