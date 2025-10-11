@@ -14,7 +14,7 @@ self-referential struct.
 
 # Example Usage
 
-A typical use case might look something like this:
+Here's one example use case:
 ```rust
 use pair::{Dependent, Owner, Pair};
 
@@ -49,12 +49,11 @@ impl<'any> Owner<'any> for MyBuffer {
 
 // You can now use MyBuffer in a Pair:
 fn main() {
+    let buffer = MyBuffer { data: String::from("this is an example") };
+
     // A Pair can be constructed from an owner value (MyBuffer, in this example)
     // and a function to construct the dependent value (parse, in this example)
-    let mut pair = Pair::new(
-        MyBuffer { data: String::from("this is an example") },
-        parse,
-    );
+    let mut pair = Pair::new(buffer, parse);
 
     // You can obtain a reference to the owner via a reference to the pair
     let owner: &MyBuffer = pair.owner();
@@ -100,6 +99,7 @@ point, the owner can safely be recovered and the `Pair` deconstructed.
 
 # Related Projects
 
+<!-- TODO: improve this table -->
 | Crate | Macro free | No `alloc` | Maintained | Soundness |
 | ----- | :--------: | :-------------: | :--------: | :-------: |
 | `pair` | ✅ | ❌ | ✅ | No known issues |
